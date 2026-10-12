@@ -418,7 +418,15 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
-$('loginBtn').onclick = () => { const p = new firebase.auth.GoogleAuthProvider(); auth.signInWithRedirect(p); };
+$('loginBtn').onclick = async () => {
+  const p = new firebase.auth.GoogleAuthProvider();
+  p.setCustomParameters({ prompt: 'select_account' });
+  try { await auth.signInWithPopup(p); }
+  catch (e) {
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') auth.signInWithRedirect(p);
+    else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') toast('로그인 실패: ' + (e.code || ''));
+  }
+};
 $('joinLogoutBtn').onclick = () => auth.signOut();
 $('joinBtn').onclick = async () => {
   const name = $('joinName').value.trim(), code = $('joinCode').value.trim();
