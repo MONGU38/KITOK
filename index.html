@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>끼리톡</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#DC143C">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --c:#DC143C;--cd:#A50E2D;--cdd:#7A0A21;--cl:#FDE8EC;--cll:#FFF5F7;
+  --bg:#FAF3F4;--chat:#F4E6E9;--line:#EBD9DD;--txt:#2A1A1E;--sub:#8A7378;--white:#fff;
+  --gold:#F5B942;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;line-height:1.5;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:inherit;font-size:15px}
+.hidden{display:none!important}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column}
+.center{align-items:center;justify-content:center}
+
+.splash{background:linear-gradient(160deg,var(--c) 0%,var(--cdd) 100%);color:#fff;text-align:center;padding:32px}
+.logo{width:96px;height:96px;border-radius:28px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:52px;margin:0 auto 20px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.splash h1{font-size:34px;font-weight:800;letter-spacing:-1px}
+.splash p{opacity:.9;margin-top:6px}
+.spin{width:28px;height:28px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;margin:28px auto 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gBtn{margin-top:40px;background:#fff;color:var(--txt);font-weight:700;padding:14px 28px;border-radius:14px;font-size:16px;display:inline-flex;align-items:center;gap:10px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.gBtn span{font-size:20px;font-weight:800;color:#4285F4}
+.feat{margin-top:34px;text-align:left;display:inline-block;font-size:14px;opacity:.95}
+.feat div{margin:6px 0}
+.joinBox{background:#fff;color:var(--txt);border-radius:20px;padding:24px;width:100%;max-width:360px;text-align:left;margin-top:24px}
+.joinBox label{display:block;font-size:13px;font-weight:700;color:var(--cd);margin:12px 0 6px}
+.joinBox .hint{font-size:12px;color:var(--sub);margin-top:10px}
+
+.topbar{background:var(--c);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(122,10,33,.25);z-index:2}
+.topbar h1{font-size:20px;font-weight:800}
+.topActions button{font-size:24px;width:40px;height:40px;border-radius:12px;color:#fff}
+.topActions button:active{background:rgba(255,255,255,.18)}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tab{padding-bottom:20px}
+.bottomnav{display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.bottomnav button{flex:1;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--sub);position:relative}
+.bottomnav button i{font-style:normal;font-size:22px;line-height:1.2;filter:grayscale(1);opacity:.6}
+.bottomnav button.on{color:var(--c);font-weight:700}
+.bottomnav button.on i{filter:none;opacity:1}
+.navBadge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--c);color:#fff;font-size:10px;font-weight:700;padding:0 5px;border-radius:9px;min-width:17px;line-height:17px}
+
+.roomItem{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.roomItem:active{background:var(--cll)}
+.avatar{width:48px;height:48px;border-radius:17px;background:linear-gradient(140deg,var(--c),var(--cdd));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;flex-shrink:0}
+.rMid{flex:1;min-width:0}
+.rTop{display:flex;align-items:center;gap:6px}
+.rTop b{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnt{font-size:12px;color:var(--sub)}
+.rLast{font-size:13.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rRight{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.rTime{font-size:11.5px;color:var(--sub)}
+.badge{background:var(--c);color:#fff;font-size:11.5px;font-weight:700;padding:0 7px;border-radius:10px;line-height:20px;min-width:20px;text-align:center}
+.empty{text-align:center;color:var(--sub);padding:50px 20px;font-size:14px;line-height:1.8}
+
+.searchBox{margin:12px 14px;display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:9px 12px}
+.searchBox input{flex:1;border:none;outline:none;background:none}
+.searchBox:focus-within{border-color:var(--c)}
+.fRow{display:flex;align-items:center;gap:6px;padding:10px 10px;border-radius:12px;margin:5px 14px;border:1.5px solid}
+.lv1{background:#FDE2E7;border-color:#F4A3B3;color:var(--cdd)}
+.lv2{background:#FFF0F2;border-color:#F7C1CB;color:var(--cd)}
+.lv3{background:#FFF4E3;border-color:#F3C77D;color:#8A4A00}
+.lv4{background:#F4EEF9;border-color:#CDB6E2;color:#5B3A7A}
+.arrow{width:18px;text-align:center;font-size:12px}
+.fName{font-weight:700;font-size:14.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fCnt{font-size:11.5px;background:rgba(255,255,255,.75);padding:1px 8px;border-radius:10px}
+.fActs{display:flex;gap:2px}
+.fActs button{width:32px;height:30px;border-radius:8px;font-size:15px}
+.fActs button:active{background:rgba(255,255,255,.7)}
+.tItem{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin:4px 14px}
+.tItem:active{background:var(--cll)}
+.tKind{font-size:20px}
+.tMid{flex:1;min-width:0}
+.tTitle{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tSub{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.secTitle{font-size:13px;font-weight:800;color:var(--cd);margin:18px 16px 6px}
+
+.card{background:#fff;border-radius:16px;margin:12px 14px;padding:16px;border:1px solid var(--line)}
+.card h3{font-size:15px;margin-bottom:10px;color:var(--cdd)}
+.card p{font-size:13.5px;color:var(--sub)}
+.bar{height:10px;background:var(--cl);border-radius:6px;overflow:hidden;margin:10px 0 6px}
+.bar div{height:100%;background:linear-gradient(90deg,var(--c),var(--cdd));border-radius:6px}
+.leftItem{display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px}
+.leftItem .rMid small{color:var(--sub);font-size:12.5px}
+
+.btn{background:var(--c);color:#fff;font-weight:700;padding:10px 16px;border-radius:12px;font-size:14.5px}
+.btn:active{background:var(--cd)}
+.btn.gray{background:#EFE4E6;color:var(--txt)}
+.btn.danger{background:#fff;color:var(--c);border:1.5px solid var(--c)}
+.btn.small{padding:7px 12px;font-size:13px;border-radius:10px}
+.btn.wide{width:100%;margin-top:10px}
+.btn:disabled{opacity:.45}
+.inp{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;outline:none;background:#fff}
+.inp:focus{border-color:var(--c)}
+textarea.inp{resize:vertical;min-height:80px}
+.row{display:flex;gap:8px;align-items:center;margin-top:12px}
+.row.end{justify-content:flex-end}
+
+.roomHead{background:var(--c);color:#fff;display:flex;align-items:center;gap:6px;padding:10px 8px;padding-top:calc(10px + env(safe-area-inset-top));box-shadow:0 2px 10px rgba(122,10,33,.25);z-index:2}
+.roomHead button{width:42px;height:42px;font-size:26px;color:#fff;border-radius:12px}
+.roomHead button:active{background:rgba(255,255,255,.18)}
+.roomTitle{flex:1;min-width:0}
+.roomTitle b{display:block;font-size:16.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roomTitle small{opacity:.85;font-size:12px}
+.noticeBar{background:#fff;border-bottom:1px solid var(--line);padding:9px 14px;display:flex;gap:8px;align-items:flex-start;font-size:13.5px}
+.noticeBar .nText{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.noticeBar.open .nText{white-space:pre-wrap}
+.noticeBar button{color:var(--sub);font-size:14px}
+.reqBar{background:#FFF4E3;border-bottom:1px solid #F3C77D;padding:9px 14px;font-size:13.5px}
+.reqBar .rq{display:flex;align-items:center;gap:6px;margin:3px 0}
+.reqBar .rq span{flex:1}
+#msgArea{flex:1;overflow-y:auto;background:var(--chat);padding:8px 10px 14px;-webkit-overflow-scrolling:touch}
+.moreBtn{display:block;margin:6px auto 10px;background:rgba(255,255,255,.85);color:var(--cd);font-size:13px;font-weight:700;padding:7px 16px;border-radius:16px}
+.daySep{text-align:center;margin:14px 0 10px}
+.daySep span{background:rgba(122,10,33,.12);color:var(--cdd);font-size:12px;padding:4px 12px;border-radius:12px}
+.sysMsg{text-align:center;font-size:12.5px;color:var(--cdd);background:rgba(255,255,255,.6);margin:8px auto;padding:4px 12px;border-radius:12px;width:fit-content;max-width:90%}
+.mRow{display:flex;gap:8px;margin:3px 0;align-items:flex-start}
+.mRow.mine{justify-content:flex-end}
+.mRow.hl .bubble{box-shadow:0 0 0 3px var(--gold)}
+.mAvatar{width:38px;height:38px;border-radius:14px;background:linear-gradient(140deg,#F08A9E,var(--c));color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mAvatar.ghost{visibility:hidden;height:1px}
+.mCol{max-width:76%;display:flex;flex-direction:column}
+.mine .mCol{align-items:flex-end}
+.mName{font-size:12.5px;color:var(--cdd);margin:0 0 3px 2px;font-weight:600}
+.mLine{display:flex;align-items:flex-end;gap:5px}
+.mMeta{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;font-size:10.5px;line-height:1.3}
+.other .mMeta{align-items:flex-start}
+.unread{color:var(--gold);font-weight:800;font-size:11px}
+.mTime{color:var(--sub);white-space:nowrap}
+.bubble{background:#fff;padding:8px 12px;border-radius:4px 16px 16px 16px;word-break:break-word;white-space:pre-wrap;font-size:14.5px;box-shadow:0 1px 1px rgba(0,0,0,.04);min-width:0}
+.mine .bubble{background:var(--c);color:#fff;border-radius:16px 4px 16px 16px}
+.mine .bubble .lnk{color:#FFE3E8}
+.bubble .lnk{color:var(--cd);text-decoration:underline;word-break:break-all}
+.bubble.del{background:rgba(255,255,255,.55)!important;color:var(--sub)!important;font-style:italic;font-size:13.5px}
+.bubble.rep{background:#FFF8E6!important;color:var(--txt)!important;border:1.5px dashed var(--gold)}
+.repTag{font-size:11.5px;font-weight:700;color:#8A4A00;margin-bottom:4px}
+.repMark{font-size:11px;opacity:.75;margin-top:3px}
+.edited{font-size:11px;opacity:.7;margin-top:2px}
+.imgBox{min-width:120px}
+.mImg{display:block;max-width:100%;max-height:300px;border-radius:10px}
+.imgPh,.imgGone{font-size:12.5px;opacity:.75;padding:20px 6px;text-align:center}
+.warnTag{font-size:11.5px;font-weight:700;margin-top:5px;background:#FFF4E3;color:#8A4A00;padding:3px 8px;border-radius:8px}
+.saveImg{margin-top:6px}
+.yt{display:block;position:relative;margin-top:6px;border-radius:10px;overflow:hidden}
+.yt img{display:block;width:100%;max-width:260px}
+.yt span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(220,20,60,.9);color:#fff;width:44px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px}
+#backToLiveBtn{position:absolute;right:14px;bottom:calc(76px + env(safe-area-inset-bottom));background:var(--cdd);color:#fff;font-weight:700;font-size:13px;padding:9px 15px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:3}
+.composer{display:flex;align-items:flex-end;gap:6px;background:#fff;padding:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.composer textarea{flex:1;border:1.5px solid var(--line);border-radius:18px;padding:9px 14px;resize:none;outline:none;max-height:120px;line-height:1.4}
+.composer textarea:focus{border-color:var(--c)}
+.composer .icon{width:42px;height:42px;font-size:22px;border-radius:50%}
+.composer .send{background:var(--c);color:#fff;font-weight:700;padding:0 16px;height:42px;border-radius:21px;font-size:14.5px}
+
+.overlay{position:fixed;inset:0;background:rgba(40,8,16,.5);display:flex;align-items:flex-end;justify-content:center;z-index:50;animation:fadeIn .15s}
+@keyframes fadeIn{from{opacity:0}}
+.modal{background:#fff;width:100%;max-width:520px;max-height:86vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);animation:up .2s ease-out}
+.modal.full{height:86vh}
+@keyframes up{from{transform:translateY(40px)}}
+.mHead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;border-bottom:1px solid var(--line)}
+.mHead b{font-size:16.5px;color:var(--cdd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mClose{font-size:18px;color:var(--sub);width:34px;height:34px}
+.mBody{padding:14px 18px 18px;overflow-y:auto;flex:1}
+.sheetBtn{display:block;width:100%;text-align:left;padding:14px 6px;font-size:15.5px;border-bottom:1px solid var(--line)}
+.sheetBtn:last-child{border-bottom:none}
+.sheetBtn.danger{color:var(--c);font-weight:700}
+.sheetBtn:active{background:var(--cll)}
+.pickList{max-height:46vh;overflow-y:auto;margin-top:12px}
+.pick{display:flex;align-items:center;gap:10px;padding:11px 6px;border-bottom:1px solid var(--line);font-size:15px}
+.pick input{width:20px;height:20px;accent-color:var(--c)}
+.pfRow{padding:10px 12px;border-radius:10px;border:1.5px solid;margin:5px 0;font-weight:600;font-size:14.5px}
+.pfRow small{font-weight:500;opacity:.7}
+.segs{display:flex;gap:6px;margin-bottom:12px}
+.segs button{flex:1;padding:8px 0;border-radius:10px;background:#F4E9EB;font-size:13.5px;font-weight:600}
+.segs button.on{background:var(--c);color:#fff}
+.pvItem{border-bottom:1px solid var(--line);padding:10px 2px}
+.pvItem:active{background:var(--cll)}
+.pvDate{font-size:12px;color:var(--sub);margin-bottom:3px}
+.pvText{font-size:14px;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.pvItem .mImg{max-height:160px}
+.dPath{font-size:12.5px;color:var(--cd);font-weight:700}
+.dSub{font-size:12.5px;color:var(--sub);margin-top:3px}
+.dContent{margin:14px 0;font-size:15px;white-space:pre-wrap;word-break:break-word}
+.dContent .lnk{color:var(--cd);text-decoration:underline;word-break:break-all}
+.dMemo{background:var(--cll);border-radius:10px;padding:10px 12px;font-size:14px;white-space:pre-wrap}
+.dBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.viewer{display:block;max-width:100%;margin:0 auto;border-radius:10px}
+.memberRow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.memberRow .mAvatar{width:36px;height:36px}
+.memberRow b{flex:1;font-weight:600}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(42,26,30,.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;z-index:99;max-width:86%;text-align:center;white-space:pre-line}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="screen center splash">
+  <div class="logo">💬</div>
+  <h1>끼리톡</h1>
+  <p>우리끼리 수다, 보물처럼 간직</p>
+  <div class="spin"></div>
+</div>
+
+<div id="loginScreen" class="screen center splash hidden">
+  <div class="logo">💬</div>
+  <h1>끼리톡</h1>
+  <p>우리끼리 수다, 보물처럼 간직</p>
+  <div class="feat">
+    <div>⭐ 친구가 올린 자료를 내 보물함 폴더에 저장</div>
+    <div>👤 이름을 누르면 그 친구 글만 모아보기</div>
+    <div>🚪 실수로 나온 방도 30일간 기억</div>
+  </div>
+  <div><button class="gBtn" id="loginBtn"><span>G</span>Google로 시작하기</button></div>
+</div>
+
+<div id="joinScreen" class="screen center splash hidden">
+  <div class="logo">💬</div>
+  <h1>끼리톡 가입</h1>
+  <div class="joinBox">
+    <label>닉네임 (10자 이내)</label>
+    <input id="joinName" class="inp" maxlength="10" placeholder="친구들에게 보일 이름">
+    <label>초대코드</label>
+    <input id="joinCode" class="inp" maxlength="30" placeholder="받은 초대코드 입력">
+    <button class="btn wide" id="joinBtn">가입하기</button>
+    <div class="hint">초대코드는 끼리톡을 알려준 친구에게 받으세요.</div>
+    <button class="btn gray wide" id="joinLogoutBtn">다른 계정으로 로그인</button>
+  </div>
+</div>
+
+<div id="mainScreen" class="screen hidden">
+  <header class="topbar"><h1 id="tabTitle">채팅</h1><div class="topActions" id="topActions"></div></header>
+  <main id="mainScroll">
+    <section id="tab-chats" class="tab"><div id="roomList"></div></section>
+    <section id="tab-treasure" class="tab hidden">
+      <div class="searchBox"><span>🔍</span><input id="tSearch" placeholder="폴더, 제목, 내용, 메모, 보낸 사람 검색"><button id="tSearchClear" class="hidden">✕</button></div>
+      <div id="treasureList"></div>
+    </section>
+    <section id="tab-left" class="tab hidden">
+      <div class="card"><p>최근 30일 동안 나온 방이 보입니다. [재초대 요청]을 누르면 방에 남은 친구들에게 요청이 갑니다.</p></div>
+      <div id="leftList"></div>
+    </section>
+    <section id="tab-settings" class="tab hidden"><div id="settingsBox"></div></section>
+  </main>
+  <nav class="bottomnav">
+    <button data-tab="chats" class="on"><i>💬</i>채팅<span class="navBadge hidden" id="chatBadge"></span></button>
+    <button data-tab="treasure"><i>⭐</i>보물함</button>
+    <button data-tab="left"><i>🚪</i>나간 방</button>
+    <button data-tab="settings"><i>⚙️</i>설정</button>
+  </nav>
+</div>
+
+<div id="roomScreen" class="screen hidden">
+  <header class="roomHead">
+    <button id="roomBack">‹</button>
+    <div class="roomTitle"><b id="roomName"></b><small id="roomCount"></small></div>
+    <button id="roomMenuBtn">☰</button>
+  </header>
+  <div id="noticeBar" class="noticeBar hidden"><span>📢</span><div class="nText" id="noticeText"></div><button id="noticeHide">✕</button></div>
+  <div id="reqBar" class="reqBar hidden"></div>
+  <div id="msgArea">
+    <button class="moreBtn hidden" id="loadMoreBtn">이전 대화 더보기</button>
+    <div id="msgList"></div>
+  </div>
+  <button id="backToLiveBtn" class="hidden">최신 대화로 ↓</button>
+  <footer class="composer">
+    <button class="icon" id="photoBtn" title="사진">📷</button>
+    <textarea id="msgInput" rows="1" placeholder="메시지 입력"></textarea>
+    <button class="send" id="sendBtn">전송</button>
+    <input type="file" id="photoInput" accept="image/*" hidden>
+  </footer>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toast" class="hidden"></div>
+<input type="file" id="restoreFile" accept=".json" hidden>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDsWxJwxzFWDANXjYJGZElXMZlGBLgeGKo",
+  authDomain: "kitok-b7e90.firebaseapp.com",
+  projectId: "kitok-b7e90",
+  storageBucket: "kitok-b7e90.firebasestorage.app",
+  messagingSenderId: "233850523426",
+  appId: "1:233850523426:web:696af3715b1253d3115f7b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+const FV = firebase.firestore.FieldValue;
+const TS = firebase.firestore.Timestamp;
+
+const MB = 1024 * 1024;
+const WARN_BYTES = 600 * MB;
+const PURGE_BYTES = 700 * MB;
+const PURGE_TO = 600 * MB;
+const WARN_CHUNK = 100 * MB;
+const MAX_LEVEL = 4;
+const PAGE = 50;
+const LEFT_DAYS = 30;
+const MAX_TEXT = 2000;
+
+const S = {
+  uid: null, me: null, users: {}, rooms: [], reports: {}, folders: [], saved: [], left: [], stats: {},
+  unsubs: [], room: null, msgUnsub: null, reqUnsub: null, msgs: [], hasMore: false, limit: PAGE,
+  mode: 'live', jumpMsgs: [], jumpHasNext: false, highlight: null, requests: [],
+  imgCache: {}, expanded: new Set(), tab: 'chats', search: '', sending: false, readPending: 0
+};
+
+const $ = id => document.getElementById(id);
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2400); }
+function tsMs(v) { if (!v) return Date.now(); if (typeof v === 'number') return v; if (v.toMillis) return v.toMillis(); if (v.seconds != null) return v.seconds * 1000; return Date.now(); }
+function fmtTime(ms) { const d = new Date(ms); let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, '0'); const ap = h < 12 ? '오전' : '오후'; h = h % 12 || 12; return ap + ' ' + h + ':' + m; }
+function fmtDate(ms) { const d = new Date(ms); return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + '일월화수목금토'[d.getDay()] + '요일'; }
+function fmtShort(ms) { const d = new Date(ms), n = new Date(); if (d.toDateString() === n.toDateString()) return fmtTime(ms); if (d.getFullYear() === n.getFullYear()) return (d.getMonth() + 1) + '/' + d.getDate(); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); }
+function fmtFull(ms) { const d = new Date(ms); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate() + ' ' + fmtTime(ms); }
+const URL_RE = /(https?:\/\/[^\s<]+)/g;
+function linkify(text) { return esc(text).replace(URL_RE, u => '<a href="' + u + '" target="_blank" rel="noopener" class="lnk">' + u + '</a>'); }
+function firstUrl(text) { const m = String(text || '').match(/https?:\/\/[^\s]+/); return m ? m[0] : ''; }
+function ytId(url) { const m = String(url || '').match(/(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/); return m ? m[1] : ''; }
+function ytHTML(url) { const y = ytId(url); return y ? '<a class="yt" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="https://img.youtube.com/vi/' + y + '/mqdefault.jpg" alt=""><span>▶</span></a>' : ''; }
+function chunk(arr, n) { const r = []; for (let i = 0; i < arr.length; i += n) r.push(arr.slice(i, i + n)); return r; }
+function isMobile() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+function userName(uid) { return (S.room && S.room.memberNames && S.room.memberNames[uid]) || (S.users[uid] && S.users[uid].name) || '친구'; }
+function myName() { return (S.me && S.me.name) || '나'; }
+function show(id) { ['loadingScreen', 'loginScreen', 'joinScreen', 'mainScreen', 'roomScreen'].forEach(s => $(s).classList.toggle('hidden', s !== id)); }
+function wait() { return new Promise(r => setTimeout(r, 150)); }
+function later(fn) { setTimeout(fn, 150); }
+function downloadData(dataUrl, name) { const a = document.createElement('a'); a.href = dataUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+
+let ignorePop = 0;
+let pendingPush = 0;
+function pushEntry(state) { if (ignorePop > 0) pendingPush++; else history.pushState(state, ''); }
+function popEntry() { if (pendingPush > 0) { pendingPush--; return; } ignorePop++; history.back(); }
+const modalStack = [];
+function openModal(title, body, opts) {
+  opts = opts || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay';
+  wrap.innerHTML = '<div class="modal ' + (opts.full ? 'full' : '') + '"><div class="mHead"><b>' + esc(title) + '</b><button class="mClose">✕</button></div><div class="mBody">' + body + '</div></div>';
+  wrap.addEventListener('click', e => { if (e.target === wrap) closeModal(); });
+  wrap.querySelector('.mClose').onclick = () => closeModal();
+  $('modalRoot').appendChild(wrap);
+  modalStack.push({ el: wrap, onClose: opts.onClose });
+  pushEntry({ m: 1 });
+  return wrap;
+}
+function closeModal(fromPop) {
+  const m = modalStack.pop();
+  if (!m) return;
+  m.el.remove();
+  if (m.onClose) m.onClose();
+  if (!fromPop) popEntry();
+}
+window.addEventListener('popstate', () => {
+  if (ignorePop > 0) { ignorePop--; if (ignorePop === 0) { while (pendingPush > 0) { pendingPush--; history.pushState({ m: 1 }, ''); } } return; }
+  if (modalStack.length) { closeModal(true); return; }
+  if (S.room) { closeRoom(true); return; }
+  if (S.tab !== 'chats' && !$('mainScreen').classList.contains('hidden')) { switchTab('chats'); pushEntry({ main: 1 }); }
+});
+
+function sheet(title, items) {
+  const el = openModal(title || '선택', items.map((it, i) => '<button class="sheetBtn ' + (it.danger ? 'danger' : '') + '" data-i="' + i + '">' + esc(it.label) + '</button>').join(''));
+  el.querySelectorAll('.sheetBtn').forEach(b => b.onclick = () => { const it = items[+b.dataset.i]; closeModal(); later(it.fn); });
+}
+function askText(title, value, opts) {
+  opts = opts || {};
+  return new Promise(res => {
+    let done = false;
+    const field = opts.multi
+      ? '<textarea class="inp askIn" rows="4" maxlength="' + (opts.max || 100) + '" placeholder="' + esc(opts.ph || '') + '">' + esc(value || '') + '</textarea>'
+      : '<input class="inp askIn" maxlength="' + (opts.max || 100) + '" placeholder="' + esc(opts.ph || '') + '">';
+    const el = openModal(title, field + '<div class="row end"><button class="btn gray askNo">취소</button><button class="btn askOk">확인</button></div>', { onClose: () => { if (!done) res(null); } });
+    const inp = el.querySelector('.askIn');
+    if (!opts.multi) inp.value = value || '';
+    setTimeout(() => inp.focus(), 100);
+    el.querySelector('.askOk').onclick = () => { done = true; const v = inp.value.trim(); closeModal(); res(v); };
+    el.querySelector('.askNo').onclick = () => closeModal();
+    if (!opts.multi) inp.onkeydown = e => { if (e.key === 'Enter') el.querySelector('.askOk').click(); };
+  });
+}
+function askConfirm(title, msg, okLabel, danger) {
+  return new Promise(res => {
+    let done = false;
+    const el = openModal(title, '<p style="white-space:pre-line;font-size:14.5px">' + esc(msg) + '</p><div class="row end"><button class="btn gray cNo">취소</button><button class="btn ' + (danger ? 'danger' : '') + ' cOk">' + esc(okLabel || '확인') + '</button></div>', { onClose: () => { if (!done) res(false); } });
+    el.querySelector('.cOk').onclick = () => { done = true; closeModal(); res(true); };
+    el.querySelector('.cNo').onclick = () => closeModal();
+  });
+}
+
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+auth.getRedirectResult().catch(e => toast('로그인 실패: ' + (e.code || '')));
+auth.onAuthStateChanged(async user => {
+  if (!user) { stopAll(); show('loginScreen'); return; }
+  S.uid = user.uid;
+  try {
+    const d = await db.collection('users').doc(user.uid).get();
+    if (!d.exists) { $('joinName').value = (user.displayName || '').slice(0, 10); show('joinScreen'); return; }
+    S.me = d.data();
+    startApp();
+  } catch (e) {
+    $('joinName').value = (user.displayName || '').slice(0, 10);
+    show('joinScreen');
+  }
+});
+
+$('loginBtn').onclick = () => { const p = new firebase.auth.GoogleAuthProvider(); auth.signInWithRedirect(p); };
+$('joinLogoutBtn').onclick = () => auth.signOut();
+$('joinBtn').onclick = async () => {
+  const name = $('joinName').value.trim(), code = $('joinCode').value.trim();
+  if (!name) return toast('닉네임을 입력하세요');
+  if (!code || code.indexOf('/') >= 0) return toast('초대코드를 입력하세요');
+  $('joinBtn').disabled = true;
+  try {
+    await db.collection('users').doc(S.uid).set({ name, inviteCode: code, createdAt: FV.serverTimestamp() });
+    S.me = { name };
+    startApp();
+  } catch (e) { toast('초대코드가 맞지 않습니다'); }
+  $('joinBtn').disabled = false;
+};
+
+function stopAll() {
+  S.unsubs.forEach(u => u());
+  S.unsubs = [];
+  stopRoomListeners();
+  S.room = null; S.rooms = []; S.users = {}; S.reports = {}; S.folders = []; S.saved = []; S.left = []; S.stats = {};
+  S.imgCache = {};
+}
+function listen(q, fn) { S.unsubs.push(q.onSnapshot(fn, e => console.warn(e))); }
+
+function startApp() {
+  stopAll();
+  show('mainScreen');
+  history.replaceState({ base: 1 }, '');
+  history.pushState({ main: 1 }, '');
+  switchTab('chats');
+  const uref = db.collection('users').doc(S.uid);
+  listen(db.collection('users'), snap => {
+    S.users = {};
+    snap.forEach(d => S.users[d.id] = d.data());
+    if (S.users[S.uid]) S.me = S.users[S.uid];
+    if (S.tab === 'settings') renderSettings();
+  });
+  listen(db.collection('rooms').where('members', 'array-contains', S.uid), snap => {
+    S.rooms = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).sort((a, b) => tsMs(b.lastAt) - tsMs(a.lastAt));
+    renderRooms();
+    cleanLeft();
+    if (S.room) {
+      const r = S.rooms.find(x => x.id === S.room.id);
+      if (r) { S.room = r; renderRoomHead(); renderMsgs(); markRead(); }
+    }
+    updateBadges();
+  });
+  listen(uref.collection('reports'), snap => {
+    S.reports = {};
+    snap.forEach(d => S.reports[d.id] = d.data());
+    if (S.room) renderMsgs();
+  });
+  listen(uref.collection('folders'), snap => {
+    S.folders = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    if (S.tab === 'treasure') renderTreasure();
+  });
+  listen(uref.collection('saved'), snap => {
+    S.saved = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    if (S.tab === 'treasure') renderTreasure();
+  });
+  listen(uref.collection('leftRooms'), snap => {
+    S.left = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    cleanLeft();
+    if (S.tab === 'left') renderLeft();
+  });
+  listen(db.collection('stats').doc('usage'), d => {
+    S.stats = d.exists ? d.data() : {};
+    if (S.tab === 'settings') renderSettings();
+  });
+}
+
+const TAB_TITLES = { chats: '채팅', treasure: '보물함', left: '나간 방', settings: '설정' };
+function switchTab(t) {
+  S.tab = t;
+  document.querySelectorAll('.bottomnav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  Object.keys(TAB_TITLES).forEach(k => $('tab-' + k).classList.toggle('hidden', k !== t));
+  $('tabTitle').textContent = TAB_TITLES[t];
+  const ta = $('topActions');
+  ta.innerHTML = '';
+  if (t === 'chats') { ta.innerHTML = '<button id="newRoomBtn" title="새 대화방">＋</button>'; $('newRoomBtn').onclick = newRoomModal; renderRooms(); }
+  if (t === 'treasure') { ta.innerHTML = '<button id="newFolderBtn" title="새 폴더">＋</button>'; $('newFolderBtn').onclick = () => createFolder(null); renderTreasure(); }
+  if (t === 'left') renderLeft();
+  if (t === 'settings') renderSettings();
+  $('mainScroll').scrollTop = 0;
+}
+document.querySelectorAll('.bottomnav button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+function unreadOf(r) { return Math.max(0, (r.msgCount || 0) - ((r.readSeq || {})[S.uid] || 0)); }
+function updateBadges() {
+  const total = S.rooms.reduce((a, r) => a + unreadOf(r), 0);
+  const b = $('chatBadge');
+  b.textContent = total > 99 ? '99+' : total;
+  b.classList.toggle('hidden', total === 0);
+  document.title = total > 0 ? '(' + total + ') 끼리톡' : '끼리톡';
+}
+
+function renderRooms() {
+  const el = $('roomList');
+  if (!S.rooms.length) { el.innerHTML = '<div class="empty">아직 대화방이 없습니다.<br>오른쪽 위 ＋ 버튼으로 방을 만드세요.</div>'; return; }
+  el.innerHTML = S.rooms.map(r => {
+    const un = unreadOf(r);
+    return '<div class="roomItem" data-id="' + r.id + '"><div class="avatar">' + esc((r.name || '?').slice(0, 1)) + '</div>' +
+      '<div class="rMid"><div class="rTop"><b>' + esc(r.name) + '</b><span class="cnt">' + (r.members || []).length + '</span></div><div class="rLast">' + esc(r.lastMessage || '') + '</div></div>' +
+      '<div class="rRight"><span class="rTime">' + (r.lastAt ? fmtShort(tsMs(r.lastAt)) : '') + '</span>' + (un > 0 ? '<span class="badge">' + (un > 99 ? '99+' : un) + '</span>' : '') + '</div></div>';
+  }).join('');
+  el.querySelectorAll('.roomItem').forEach(x => x.onclick = () => openRoom(x.dataset.id));
+}
+
+function friendList(excludeIds) {
+  return Object.keys(S.users).filter(id => id !== S.uid && excludeIds.indexOf(id) < 0).map(id => [id, S.users[id]]).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+}
+function newRoomModal() {
+  const friends = friendList([]);
+  if (!friends.length) return toast('아직 가입한 친구가 없습니다');
+  const el = openModal('새 대화방', '<input class="inp" id="nrName" maxlength="20" placeholder="방 이름 (비우면 이름으로 자동)"><div class="pickList">' +
+    friends.map(f => '<label class="pick"><input type="checkbox" value="' + f[0] + '"><span>' + esc(f[1].name) + '</span></label>').join('') +
+    '</div><div class="row end"><button class="btn" id="nrOk">만들기</button></div>');
+  el.querySelector('#nrOk').onclick = async () => {
+    const ids = Array.from(el.querySelectorAll('.pick input:checked')).map(i => i.value);
+    if (!ids.length) return toast('친구를 선택하세요');
+    const members = [S.uid].concat(ids);
+    const names = {}, zero = {};
+    members.forEach(id => { names[id] = (S.users[id] || {}).name || '친구'; zero[id] = 0; });
+    let name = el.querySelector('#nrName').value.trim();
+    if (!name) name = members.map(id => names[id]).join(', ').slice(0, 20);
+    const ref = db.collection('rooms').doc();
+    el.querySelector('#nrOk').disabled = true;
+    try {
+      await ref.set({ name, members, memberNames: names, msgCount: 0, readSeq: zero, joinSeq: zero, notice: '', createdBy: S.uid, createdAt: FV.serverTimestamp(), lastAt: FV.serverTimestamp(), lastMessage: '' });
+      closeModal();
+      await sendTo(ref.id, { type: 'system', text: myName() + '님이 대화방을 만들었습니다' }, '대화방이 만들어졌습니다');
+      openRoom(ref.id);
+    } catch (e) { toast('방 만들기 실패'); el.querySelector('#nrOk').disabled = false; }
+  };
+}
+
+async function openRoom(id, jumpSeq) {
+  let r = S.rooms.find(x => x.id === id);
+  if (!r) {
+    try {
+      const d = await db.collection('rooms').doc(id).get();
+      if (!d.exists) return toast('방을 찾을 수 없습니다');
+      r = Object.assign({ id: d.id }, d.data());
+    } catch (e) { return toast('방에 들어갈 수 없습니다'); }
+  }
+  S.room = r; S.limit = PAGE; S.mode = 'live'; S.msgs = []; S.jumpMsgs = []; S.highlight = null; S.readPending = 0;
+  $('msgList').innerHTML = '';
+  $('msgInput').value = '';
+  $('backToLiveBtn').classList.add('hidden');
+  show('roomScreen');
+  pushEntry({ room: 1 });
+  renderRoomHead();
+  subscribeMsgs(true);
+  subscribeRequests();
+  if (jumpSeq) jumpTo(jumpSeq);
+}
+function stopRoomListeners() {
+  if (S.msgUnsub) { S.msgUnsub(); S.msgUnsub = null; }
+  if (S.reqUnsub) { S.reqUnsub(); S.reqUnsub = null; }
+}
+function closeRoom(fromPop) {
+  stopRoomListeners();
+  S.room = null;
+  S.mode = 'live';
+  show('mainScreen');
+  renderRooms();
+  if (!fromPop) popEntry();
+}
+$('roomBack').onclick = () => closeRoom();
+
+function noticeKey() { return 'kkiri_notice_' + S.room.id; }
+function renderRoomHead() {
+  const r = S.room;
+  if (!r) return;
+  $('roomName').textContent = r.name;
+  $('roomCount').textContent = '대화상대 ' + (r.members || []).length + '명';
+  let hiddenNotice = '';
+  try { hiddenNotice = localStorage.getItem(noticeKey()) || ''; } catch (e) {}
+  const show_ = r.notice && hiddenNotice !== r.notice;
+  $('noticeBar').classList.toggle('hidden', !show_);
+  if (show_) $('noticeText').textContent = r.notice;
+}
+$('noticeText').onclick = () => $('noticeBar').classList.toggle('open');
+$('noticeHide').onclick = () => { try { localStorage.setItem(noticeKey(), S.room.notice || ''); } catch (e) {} $('noticeBar').classList.add('hidden'); };
+
+function subscribeMsgs(toBottom) {
+  if (S.msgUnsub) { S.msgUnsub(); S.msgUnsub = null; }
+  const rid = S.room.id;
+  const q = db.collection('rooms').doc(rid).collection('messages').orderBy('seq', 'desc').limit(S.limit);
+  S.msgUnsub = q.onSnapshot(snap => {
+    if (!S.room || S.room.id !== rid) return;
+    const area = $('msgArea');
+    const nearBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 150;
+    const prevH = area.scrollHeight, prevTop = area.scrollTop;
+    S.msgs = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).reverse();
+    S.hasMore = snap.size >= S.limit;
+    if (S.mode !== 'live') return;
+    renderMsgs();
+    if (toBottom || nearBottom || S.sentNow) { area.scrollTop = area.scrollHeight; S.stick = true; toBottom = false; S.sentNow = false; }
+    else if (S.loadingMore) { area.scrollTop = area.scrollHeight - prevH + prevTop; S.stick = false; }
+    else S.stick = false;
+    S.loadingMore = false;
+    markRead();
+  }, e => console.warn(e));
+}
+
+function joinSeqMe() { return ((S.room && S.room.joinSeq) || {})[S.uid] || 0; }
+function unreadForMsg(m) {
+  const r = S.room, rs = r.readSeq || {}, js = r.joinSeq || {};
+  return (r.members || []).filter(u => (js[u] || 0) < m.seq && (rs[u] || 0) < m.seq).length;
+}
+function imgHTML(id, opts) {
+  opts = opts || {};
+  if (id && Object.prototype.hasOwnProperty.call(S.imgCache, id)) {
+    const img = S.imgCache[id];
+    if (!img) return '<div class="imgGone">보관 기간이 지나 삭제된 사진입니다</div>';
+    return '<img class="mImg" src="' + img.data + '">' + (isWarn(img) ? '<div class="warnTag">⏳ 곧 삭제 예정 · 폰에 저장하세요</div>' : '') +
+      (opts.save ? '<button class="btn small gray saveImg" data-dl="' + id + '">📥 폰에 저장</button>' : '');
+  }
+  return '<div class="imgPh">사진 불러오는 중…</div>';
+}
+function isWarn(img) { const wb = S.stats.warnBefore; return !!(img && wb && img.createdAt && tsMs(img.createdAt) <= tsMs(wb)); }
+async function getImage(id) {
+  if (!id) return null;
+  if (Object.prototype.hasOwnProperty.call(S.imgCache, id)) return S.imgCache[id];
+  try { const d = await db.collection('images').doc(id).get(); S.imgCache[id] = d.exists ? d.data() : null; }
+  catch (e) { return null; }
+  return S.imgCache[id];
+}
+function loadImages(root) {
+  root.querySelectorAll('.imgBox[data-img]').forEach(async box => {
+    if (box.dataset.done) return;
+    box.dataset.done = '1';
+    await getImage(box.dataset.img);
+    box.innerHTML = imgHTML(box.dataset.img, { save: !!box.dataset.save });
+    const im = box.querySelector('img');
+    if (im && S.stick && root === $('msgList')) im.onload = () => { const a = $('msgArea'); a.scrollTop = a.scrollHeight; };
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-dl]');
+  if (!b) return;
+  e.stopPropagation();
+  const img = S.imgCache[b.dataset.dl];
+  if (img) downloadData(img.data, 'kkiritalk_' + Date.now() + '.jpg');
+}, true);
+
+function bubbleHTML(m) {
+  const rep = S.reports[S.room.id + '_' + m.id];
+  if (m.deleted) {
+    if (rep) return '<div class="bubble rep" data-id="' + m.id + '"><div class="repTag">🔒 신고 보관 · 나에게만 보임</div>' +
+      (rep.imageData ? '<img class="mImg" src="' + rep.imageData + '">' : '') + (rep.text ? '<div>' + linkify(rep.text) + '</div>' : '') + '</div>';
+    return '<div class="bubble del" data-id="' + m.id + '">삭제된 메시지입니다</div>';
+  }
+  let inner;
+  if (m.type === 'image') {
+    const cached = m.imageId && Object.prototype.hasOwnProperty.call(S.imgCache, m.imageId);
+    inner = '<div class="imgBox" data-img="' + esc(m.imageId) + '"' + (cached ? ' data-done="1"' : '') + '>' + imgHTML(m.imageId) + '</div>';
+  } else {
+    inner = linkify(m.text) + ytHTML(firstUrl(m.text));
+  }
+  return '<div class="bubble" data-id="' + m.id + '">' + inner + (m.edited ? '<div class="edited">수정됨</div>' : '') + (rep ? '<div class="repMark">🔒 신고함</div>' : '') + '</div>';
+}
+function metaHTML(un, showTime, ms) {
+  return '<div class="mMeta">' + (un > 0 ? '<span class="unread">' + un + '</span>' : '') + (showTime ? '<span class="mTime">' + fmtTime(ms) + '</span>' : '') + '</div>';
+}
+function renderMsgs() {
+  if (!S.room) return;
+  const list = S.mode === 'live' ? S.msgs : S.jumpMsgs;
+  const jm = joinSeqMe();
+  const vis = list.filter(m => m.seq > jm);
+  const canMore = vis.length && vis[0].seq > jm + 1 && (S.mode === 'live' ? S.hasMore : vis[0].seq > 1);
+  $('loadMoreBtn').classList.toggle('hidden', !canMore);
+  let html = '', lastDay = '', lastSender = '';
+  vis.forEach((m, i) => {
+    const ms = tsMs(m.createdAt);
+    const day = new Date(ms).toDateString();
+    if (day !== lastDay) { html += '<div class="daySep"><span>' + fmtDate(ms) + '</span></div>'; lastDay = day; lastSender = ''; }
+    if (m.type === 'system') { html += '<div class="sysMsg">' + esc(m.text) + '</div>'; lastSender = ''; return; }
+    const mine = m.senderId === S.uid;
+    const next = vis[i + 1];
+    const showTime = !next || next.type === 'system' || next.senderId !== m.senderId || fmtTime(tsMs(next.createdAt)) !== fmtTime(ms) || new Date(tsMs(next.createdAt)).toDateString() !== day;
+    const showName = !mine && lastSender !== m.senderId;
+    lastSender = m.senderId;
+    const un = m.deleted ? 0 : unreadForMsg(m);
+    const nm = esc(m.senderName || '친구');
+    html += '<div class="mRow ' + (mine ? 'mine' : 'other') + (S.highlight === m.seq ? ' hl' : '') + '" data-seq="' + m.seq + '">' +
+      (!mine ? '<div class="mAvatar ' + (showName ? '' : 'ghost') + '" data-uid="' + m.senderId + '" data-name="' + nm + '">' + (showName ? nm.slice(0, 1) : '') + '</div>' : '') +
+      '<div class="mCol">' + (showName ? '<div class="mName" data-uid="' + m.senderId + '" data-name="' + nm + '">' + nm + '</div>' : '') +
+      '<div class="mLine">' + (mine ? metaHTML(un, showTime, ms) : '') + bubbleHTML(m) + (!mine ? metaHTML(un, showTime, ms) : '') + '</div></div></div>';
+  });
+  if (S.mode === 'jump' && S.jumpHasNext) html += '<button class="moreBtn" id="jumpNext">다음 대화 더보기</button>';
+  $('msgList').innerHTML = html || '<div class="empty">첫 메시지를 보내보세요 👋</div>';
+  loadImages($('msgList'));
+}
+
+$('msgList').addEventListener('click', e => {
+  if (e.target.closest('a') || e.target.closest('[data-dl]')) return;
+  if (e.target.id === 'jumpNext') { jumpNext(); return; }
+  const nm = e.target.closest('[data-uid]');
+  if (nm) { personView(nm.dataset.uid, nm.dataset.name || userName(nm.dataset.uid)); return; }
+  const b = e.target.closest('.bubble');
+  if (!b) return;
+  const list = S.mode === 'live' ? S.msgs : S.jumpMsgs;
+  const m = list.find(x => x.id === b.dataset.id);
+  if (m) msgMenu(m);
+});
+
+function markRead() {
+  if (!S.room || S.mode !== 'live' || document.hidden || $('roomScreen').classList.contains('hidden')) return;
+  const r = S.room, cnt = r.msgCount || 0, mine = (r.readSeq || {})[S.uid] || 0;
+  if (cnt > mine && S.readPending !== cnt) {
+    S.readPending = cnt;
+    const u = {}; u['readSeq.' + S.uid] = cnt;
+    db.collection('rooms').doc(r.id).update(u).catch(() => {});
+  }
+}
+document.addEventListener('visibilitychange', markRead);
+
+async function sendTo(rid, data, preview) {
+  const roomRef = db.collection('rooms').doc(rid);
+  const msgRef = roomRef.collection('messages').doc();
+  await db.runTransaction(async t => {
+    const r = await t.get(roomRef);
+    if (!r.exists || (r.data().members || []).indexOf(S.uid) < 0) throw new Error('notmember');
+    const seq = (r.data().msgCount || 0) + 1;
+    t.set(msgRef, Object.assign({}, data, { seq, senderId: S.uid, senderName: myName(), createdAt: FV.serverTimestamp(), deleted: false }));
+    const u = { msgCount: seq, lastAt: FV.serverTimestamp(), lastMessage: String(preview || '').slice(0, 60) };
+    u['readSeq.' + S.uid] = seq;
+    t.update(roomRef, u);
+  });
+  return msgRef.id;
+}
+
+function autoGrow() { const t = $('msgInput'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px'; }
+$('msgInput').addEventListener('input', autoGrow);
+$('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !isMobile()) { e.preventDefault(); onSend(); } });
+$('sendBtn').onclick = onSend;
+async function onSend() {
+  const v = $('msgInput').value.trim();
+  if (!v || S.sending || !S.room) return;
+  if (v.length > MAX_TEXT) return toast(MAX_TEXT + '자까지 보낼 수 있습니다');
+  S.sending = true;
+  $('msgInput').value = ''; autoGrow();
+  if (S.mode !== 'live') backToLive();
+  S.sentNow = true;
+  try { await sendTo(S.room.id, { type: firstUrl(v) ? 'link' : 'text', text: v }, v); }
+  catch (e) { $('msgInput').value = v; autoGrow(); toast('전송 실패. 인터넷을 확인하세요'); }
+  S.sending = false;
+  $('msgInput').focus();
+}
+
+$('photoBtn').onclick = () => $('photoInput').click();
+$('photoInput').onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f || !S.room) return;
+  if (!f.type || f.type.indexOf('image/') !== 0) return toast('사진만 올릴 수 있습니다.\n영상은 링크로 공유해 주세요');
+  toast('사진 압축 중…');
+  try {
+    const data = await compress(f);
+    const bytes = data.length;
+    const imgRef = db.collection('images').doc();
+    const batch = db.batch();
+    batch.set(imgRef, { data, bytes, ownerId: S.uid, createdAt: FV.serverTimestamp() });
+    batch.set(db.collection('imageMeta').doc(imgRef.id), { bytes, ownerId: S.uid, createdAt: FV.serverTimestamp(), savedCount: 0, msgDeleted: false });
+    batch.set(db.collection('stats').doc('usage'), { bytes: FV.increment(bytes) }, { merge: true });
+    await batch.commit();
+    S.imgCache[imgRef.id] = { data, bytes, createdAt: TS.now() };
+    if (S.mode !== 'live') backToLive();
+    S.sentNow = true;
+    await sendTo(S.room.id, { type: 'image', imageId: imgRef.id, text: '' }, '사진');
+    checkStorage();
+  } catch (err) { console.warn(err); toast('사진 전송 실패'); }
+};
+function compress(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let max = 1280, q = 0.72, out = '';
+      for (let i = 0; i < 6; i++) {
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * sc));
+        c.height = Math.max(1, Math.round(img.height * sc));
+        const x = c.getContext('2d');
+        x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+        x.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q);
+        if (out.length <= 220 * 1024) break;
+        max = Math.round(max * 0.8); q = Math.max(0.45, q - 0.08);
+      }
+      res(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); };
+    img.src = url;
+  });
+}
+
+async function purgeOne(metaDoc) {
+  const metaRef = metaDoc.ref, id = metaDoc.id;
+  let freed = 0;
+  await db.runTransaction(async t => {
+    const md = await t.get(metaRef);
+    if (!md.exists) return;
+    freed = md.data().bytes || 0;
+    t.delete(metaRef);
+    t.delete(db.collection('images').doc(id));
+    t.set(db.collection('stats').doc('usage'), { bytes: FV.increment(-freed) }, { merge: true });
+  });
+  S.imgCache[id] = null;
+  return freed;
+}
+async function checkStorage() {
+  try {
+    const ref = db.collection('stats').doc('usage');
+    let s = (await ref.get()).data() || {};
+    let bytes = s.bytes || 0;
+    if (bytes > PURGE_BYTES) {
+      let need = bytes - PURGE_TO;
+      while (need > 0) {
+        const q = await db.collection('imageMeta').orderBy('createdAt').limit(20).get();
+        if (q.empty) break;
+        for (const d of q.docs) { need -= await purgeOne(d); if (need <= 0) break; }
+      }
+      await ref.set({ warnBefore: null }, { merge: true });
+      s = (await ref.get()).data() || {};
+      bytes = s.bytes || 0;
+    }
+    if (bytes > WARN_BYTES) {
+      if (!s.warnBefore) {
+        let sum = 0, last = null, after = null;
+        while (sum < WARN_CHUNK) {
+          let q = db.collection('imageMeta').orderBy('createdAt').limit(100);
+          if (after) q = q.startAfter(after);
+          const r = await q.get();
+          if (r.empty) break;
+          for (const d of r.docs) { sum += d.data().bytes || 0; last = d.data().createdAt; if (sum >= WARN_CHUNK) break; }
+          after = r.docs[r.docs.length - 1];
+          if (r.size < 100) break;
+        }
+        if (last) await ref.set({ warnBefore: last }, { merge: true });
+      }
+    } else if (s.warnBefore) {
+      await ref.set({ warnBefore: null }, { merge: true });
+    }
+  } catch (e) { console.warn(e); }
+}
+
+async function releaseImage(id) {
+  try {
+    await db.runTransaction(async t => {
+      const mr = db.collection('imageMeta').doc(id);
+      const md = await t.get(mr);
+      if (!md.exists) return;
+      if ((md.data().savedCount || 0) > 0) { t.update(mr, { msgDeleted: true }); return; }
+      t.delete(mr);
+      t.delete(db.collection('images').doc(id));
+      t.set(db.collection('stats').doc('usage'), { bytes: FV.increment(-(md.data().bytes || 0)) }, { merge: true });
+    });
+  } catch (e) { console.warn(e); }
+}
+async function releaseSaved(id) {
+  try {
+    let gone = false;
+    await db.runTransaction(async t => {
+      const mr = db.collection('imageMeta').doc(id);
+      const md = await t.get(mr);
+      if (!md.exists) return;
+      const left = Math.max(0, (md.data().savedCount || 0) - 1);
+      if (left === 0 && md.data().msgDeleted) {
+        t.delete(mr);
+        t.delete(db.collection('images').doc(id));
+        t.set(db.collection('stats').doc('usage'), { bytes: FV.increment(-(md.data().bytes || 0)) }, { merge: true });
+        gone = true;
+      } else t.update(mr, { savedCount: left });
+    });
+    if (gone) S.imgCache[id] = null;
+  } catch (e) { console.warn(e); }
+}
+
+function msgRef(m) { return db.collection('rooms').doc(S.room.id).collection('messages').doc(m.id); }
+function msgMenu(m) {
+  const mine = m.senderId === S.uid;
+  const rep = S.reports[S.room.id + '_' + m.id];
+  const items = [];
+  if (m.deleted) {
+    if (!rep) return;
+    if (rep.imageData) items.push({ label: '🔍 크게 보기', fn: () => viewImage(rep.imageData) });
+    if (rep.text) items.push({ label: '📋 복사', fn: () => copyText(rep.text) });
+    sheet('신고 보관 메시지', items);
+    return;
+  }
+  if (m.type === 'image') items.push({ label: '🔍 크게 보기', fn: async () => { const im = await getImage(m.imageId); if (im) viewImage(im.data); else toast('삭제된 사진입니다'); } });
+  if (m.type === 'image') items.push({ label: '📥 폰에 저장', fn: async () => { const im = await getImage(m.imageId); if (im) downloadData(im.data, 'kkiritalk_' + Date.now() + '.jpg'); else toast('삭제된 사진입니다'); } });
+  if (m.text) items.push({ label: '📋 복사', fn: () => copyText(m.text) });
+  items.push({ label: '⭐ 보물함에 저장', fn: () => saveToTreasure(m) });
+  if (!mine) items.push({ label: '👤 ' + (m.senderName || '친구') + '님 글 모아보기', fn: () => personView(m.senderId, m.senderName || '친구') });
+  if (mine && m.type !== 'image') items.push({ label: '✏️ 수정', fn: () => editMsg(m) });
+  if (mine) items.push({ label: '🗑️ 삭제', danger: true, fn: () => deleteMsg(m) });
+  if (!mine && !rep) items.push({ label: '🚨 신고 (지워도 나에게 보관)', danger: true, fn: () => reportMsg(m) });
+  sheet('메시지', items);
+}
+function copyText(t) {
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했습니다')).catch(() => toast('복사 실패'));
+  else toast('복사 실패');
+}
+function viewImage(data) {
+  const el = openModal('사진', '<img class="viewer" src="' + data + '"><button class="btn wide" id="viewSave">📥 폰에 저장</button>', { full: true });
+  el.querySelector('#viewSave').onclick = () => downloadData(data, 'kkiritalk_' + Date.now() + '.jpg');
+}
+async function editMsg(m) {
+  const v = await askText('메시지 수정', m.text, { multi: true, max: MAX_TEXT });
+  if (!v || v === m.text) return;
+  try { await msgRef(m).update({ text: v, edited: true, type: firstUrl(v) ? 'link' : 'text' }); }
+  catch (e) { toast('수정 실패'); }
+}
+async function deleteMsg(m) {
+  if (!await askConfirm('메시지 삭제', '이 메시지를 삭제할까요?\n모두에게 "삭제된 메시지입니다"로 보입니다.', '삭제', true)) return;
+  try {
+    await msgRef(m).update({ deleted: true, text: '', imageId: null });
+    if (m.imageId) releaseImage(m.imageId);
+    if (S.room && m.seq === S.room.msgCount) db.collection('rooms').doc(S.room.id).update({ lastMessage: '삭제된 메시지입니다' }).catch(() => {});
+  } catch (e) { toast('삭제 실패'); }
+}
+async function reportMsg(m) {
+  if (!await askConfirm('신고', '이 메시지를 신고할까요?\n상대가 나중에 지우거나 방을 나가도\n내 폰에서는 원래 내용이 계속 보입니다.', '신고', true)) return;
+  let imageData = '';
+  if (m.imageId) { const im = await getImage(m.imageId); imageData = im ? im.data : ''; }
+  try {
+    await db.collection('users').doc(S.uid).collection('reports').doc(S.room.id + '_' + m.id).set({
+      roomId: S.room.id, roomName: S.room.name, msgId: m.id, seq: m.seq, senderId: m.senderId, senderName: m.senderName || '',
+      text: m.text || '', imageData, type: m.type, msgAt: m.createdAt || null, reportedAt: FV.serverTimestamp()
+    });
+    toast('신고했습니다. 이 메시지는 나에게 보관됩니다');
+  } catch (e) { toast('신고 실패'); }
+}
+
+async function loadMore() {
+  if (!S.room) return;
+  if (S.mode === 'live') { S.loadingMore = true; S.limit += PAGE; subscribeMsgs(false); return; }
+  const first = S.jumpMsgs[0];
+  if (!first) return;
+  try {
+    const area = $('msgArea'), prevH = area.scrollHeight, prevTop = area.scrollTop;
+    const q = await db.collection('rooms').doc(S.room.id).collection('messages').where('seq', '<', first.seq).orderBy('seq', 'desc').limit(PAGE).get();
+    S.jumpMsgs = q.docs.map(d => Object.assign({ id: d.id }, d.data())).reverse().concat(S.jumpMsgs);
+    renderMsgs();
+    area.scrollTop = area.scrollHeight - prevH + prevTop;
+  } catch (e) { toast('불러오기 실패'); }
+}
+$('loadMoreBtn').onclick = loadMore;
+
+async function jumpTo(seq) {
+  if (!S.room) return;
+  if (seq <= joinSeqMe()) return toast('내가 들어오기 전 대화라 볼 수 없습니다');
+  try {
+    const q = await db.collection('rooms').doc(S.room.id).collection('messages').where('seq', '>=', Math.max(1, seq - 15)).orderBy('seq').limit(60).get();
+    S.mode = 'jump'; S.highlight = seq; S.stick = false;
+    S.jumpMsgs = q.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    S.jumpHasNext = q.size >= 60;
+    renderMsgs();
+    $('backToLiveBtn').classList.remove('hidden');
+    setTimeout(() => { const el = document.querySelector('.mRow[data-seq="' + seq + '"]'); if (el) el.scrollIntoView({ block: 'center' }); }, 60);
+  } catch (e) { toast('이동 실패'); }
+}
+async function jumpNext() {
+  const last = S.jumpMsgs[S.jumpMsgs.length - 1];
+  if (!last) return;
+  try {
+    const q = await db.collection('rooms').doc(S.room.id).collection('messages').where('seq', '>', last.seq).orderBy('seq').limit(60).get();
+    S.jumpMsgs = S.jumpMsgs.concat(q.docs.map(d => Object.assign({ id: d.id }, d.data())));
+    S.jumpHasNext = q.size >= 60;
+    if (!S.jumpHasNext) { backToLive(); return; }
+    renderMsgs();
+  } catch (e) { toast('불러오기 실패'); }
+}
+function backToLive() {
+  S.mode = 'live'; S.highlight = null; S.stick = true;
+  $('backToLiveBtn').classList.add('hidden');
+  renderMsgs();
+  const a = $('msgArea'); a.scrollTop = a.scrollHeight;
+  markRead();
+}
+$('backToLiveBtn').onclick = backToLive;
+
+$('roomMenuBtn').onclick = () => {
+  const r = S.room;
+  sheet(r.name, [
+    { label: '👥 대화상대 (' + (r.members || []).length + '명) · 글 모아보기', fn: memberList },
+    { label: '➕ 친구 초대', fn: inviteFriends },
+    { label: '📅 날짜로 찾기', fn: dateJump },
+    { label: '📢 공지 ' + (r.notice ? '수정' : '등록'), fn: editNotice },
+    { label: '✏️ 방 이름 변경', fn: renameRoom },
+    { label: '🚪 방 나가기', danger: true, fn: leaveRoom }
+  ]);
+};
+function memberList() {
+  const r = S.room;
+  const el = openModal('대화상대', (r.members || []).map(u => {
+    const nm = (r.memberNames || {})[u] || userName(u);
+    return '<div class="memberRow"><div class="mAvatar">' + esc(nm.slice(0, 1)) + '</div><b>' + esc(nm) + (u === S.uid ? ' (나)' : '') + '</b><button class="btn small gray" data-u="' + u + '" data-n="' + esc(nm) + '">글 모아보기</button></div>';
+  }).join('') + '<button class="btn wide" id="mlInvite">➕ 친구 초대</button>');
+  el.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { closeModal(); later(() => personView(b.dataset.u, b.dataset.n)); });
+  el.querySelector('#mlInvite').onclick = () => { closeModal(); later(inviteFriends); };
+}
+function inviteFriends() {
+  const friends = friendList(S.room.members || []);
+  if (!friends.length) return toast('초대할 친구가 없습니다');
+  const el = openModal('친구 초대', '<div class="pickList">' + friends.map(f => '<label class="pick"><input type="checkbox" value="' + f[0] + '"><span>' + esc(f[1].name) + '</span></label>').join('') + '</div><div class="row end"><button class="btn" id="ivOk">초대</button></div>');
+  el.querySelector('#ivOk').onclick = async () => {
+    const ids = Array.from(el.querySelectorAll('.pick input:checked')).map(i => i.value);
+    if (!ids.length) return toast('친구를 선택하세요');
+    closeModal();
+    const names = ids.map(id => (S.users[id] || {}).name || '친구');
+    try { await addMembers(ids.map((id, i) => ({ uid: id, name: names[i] })), myName() + '님이 ' + names.join(', ') + '님을 초대했습니다'); }
+    catch (e) { toast('초대 실패'); }
+  };
+}
+async function addMembers(list, text) {
+  const roomRef = db.collection('rooms').doc(S.room.id);
+  const msgRef_ = roomRef.collection('messages').doc();
+  await db.runTransaction(async t => {
+    const r = await t.get(roomRef);
+    const d = r.data();
+    const add = list.filter(x => (d.members || []).indexOf(x.uid) < 0);
+    list.forEach(x => t.delete(roomRef.collection('requests').doc(x.uid)));
+    if (!add.length) return;
+    const seq = (d.msgCount || 0) + 1;
+    const u = { members: FV.arrayUnion.apply(null, add.map(x => x.uid)), msgCount: seq, lastAt: FV.serverTimestamp(), lastMessage: text.slice(0, 60) };
+    add.forEach(x => { u['memberNames.' + x.uid] = x.name; u['joinSeq.' + x.uid] = seq - 1; u['readSeq.' + x.uid] = seq - 1; });
+    u['readSeq.' + S.uid] = seq;
+    t.update(roomRef, u);
+    t.set(msgRef_, { type: 'system', text, seq, senderId: S.uid, senderName: myName(), createdAt: FV.serverTimestamp(), deleted: false });
+  });
+}
+function dateJump() {
+  const el = openModal('날짜로 찾기', '<input type="date" class="inp" id="djDate"><div class="row end"><button class="btn" id="djOk">이동</button></div>');
+  const n = new Date();
+  el.querySelector('#djDate').value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  el.querySelector('#djOk').onclick = async () => {
+    const v = el.querySelector('#djDate').value;
+    if (!v) return;
+    const p = v.split('-').map(Number);
+    const start = new Date(p[0], p[1] - 1, p[2], 0, 0, 0);
+    closeModal();
+    try {
+      const q = await db.collection('rooms').doc(S.room.id).collection('messages').where('createdAt', '>=', TS.fromDate(start)).orderBy('createdAt').limit(1).get();
+      if (q.empty) return toast('그 날짜 이후 대화가 없습니다');
+      jumpTo(q.docs[0].data().seq);
+    } catch (e) { toast('찾기 실패'); }
+  };
+}
+async function editNotice() {
+  const v = await askText('공지 (비우면 삭제)', S.room.notice || '', { multi: true, max: 500 });
+  if (v === null) return;
+  try {
+    await db.collection('rooms').doc(S.room.id).update({ notice: v });
+    await sendTo(S.room.id, { type: 'system', text: v ? myName() + '님이 공지를 등록했습니다' : myName() + '님이 공지를 내렸습니다' }, v ? '📢 ' + v : '공지 삭제');
+  } catch (e) { toast('공지 저장 실패'); }
+}
+async function renameRoom() {
+  const v = await askText('방 이름 변경', S.room.name, { max: 20 });
+  if (!v || v === S.room.name) return;
+  try {
+    await db.collection('rooms').doc(S.room.id).update({ name: v });
+    await sendTo(S.room.id, { type: 'system', text: myName() + '님이 방 이름을 "' + v + '"(으)로 바꿨습니다' }, '방 이름 변경');
+  } catch (e) { toast('변경 실패'); }
+}
+async function leaveRoom() {
+  if (!await askConfirm('방 나가기', '방을 나가면 내가 쓴 글이 모두 삭제됩니다.\n(다른 사람이 보물함에 저장한 것은 그 사람에게 남습니다)\n\n나간 방은 [나간 방] 탭에 30일간 보입니다.', '나가기', true)) return;
+  const rid = S.room.id, rname = S.room.name;
+  toast('나가는 중…');
+  try {
+    const roomRef = db.collection('rooms').doc(rid);
+    const q = await roomRef.collection('messages').where('senderId', '==', S.uid).get();
+    const mine = q.docs.filter(d => d.data().type !== 'system' && !d.data().deleted);
+    for (const part of chunk(mine, 400)) {
+      const b = db.batch();
+      part.forEach(d => b.update(d.ref, { deleted: true, text: '', imageId: null }));
+      await b.commit();
+    }
+    for (const d of mine) { const im = d.data().imageId; if (im) await releaseImage(im); }
+    const mRef = roomRef.collection('messages').doc();
+    await db.runTransaction(async t => {
+      const r = await t.get(roomRef);
+      const seq = (r.data().msgCount || 0) + 1;
+      t.set(mRef, { type: 'system', text: myName() + '님이 나갔습니다', seq, senderId: S.uid, senderName: myName(), createdAt: FV.serverTimestamp(), deleted: false });
+      const u = { members: FV.arrayRemove(S.uid), msgCount: seq, lastAt: FV.serverTimestamp(), lastMessage: myName() + '님이 나갔습니다' };
+      u['memberNames.' + S.uid] = FV.delete(); u['readSeq.' + S.uid] = FV.delete(); u['joinSeq.' + S.uid] = FV.delete();
+      t.update(roomRef, u);
+    });
+    await db.collection('users').doc(S.uid).collection('leftRooms').doc(rid).set({ roomId: rid, name: rname, leftAt: FV.serverTimestamp(), requestedAt: null });
+    closeRoom();
+    toast('방에서 나왔습니다');
+  } catch (e) { console.warn(e); toast('나가기 실패. 인터넷을 확인하세요'); }
+}
+
+function subscribeRequests() {
+  if (S.reqUnsub) { S.reqUnsub(); S.reqUnsub = null; }
+  const rid = S.room.id;
+  S.reqUnsub = db.collection('rooms').doc(rid).collection('requests').onSnapshot(snap => {
+    if (!S.room || S.room.id !== rid) return;
+    S.requests = snap.docs.map(d => d.data());
+    const bar = $('reqBar');
+    if (!S.requests.length) { bar.classList.add('hidden'); return; }
+    bar.innerHTML = S.requests.map((rq, i) => '<div class="rq"><span>🙋 <b>' + esc(rq.name) + '</b>님이 다시 들어오고 싶어 합니다</span><button class="btn small" data-ok="' + i + '">수락</button><button class="btn small gray" data-no="' + i + '">거절</button></div>').join('');
+    bar.classList.remove('hidden');
+    bar.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
+      const rq = S.requests[+b.dataset.ok];
+      try { await addMembers([{ uid: rq.uid, name: rq.name }], myName() + '님이 ' + rq.name + '님의 재입장을 수락했습니다'); }
+      catch (e) { toast('수락 실패'); }
+    });
+    bar.querySelectorAll('[data-no]').forEach(b => b.onclick = () => {
+      const rq = S.requests[+b.dataset.no];
+      db.collection('rooms').doc(rid).collection('requests').doc(rq.uid).delete().catch(() => toast('거절 실패'));
+    });
+  }, e => console.warn(e));
+}
+
+function cleanLeft() {
+  const now = Date.now();
+  S.left.forEach(l => {
+    const inRoom = S.rooms.some(r => r.id === l.id);
+    const old = l.leftAt && now - tsMs(l.leftAt) > LEFT_DAYS * 86400000;
+    if (inRoom || old) db.collection('users').doc(S.uid).collection('leftRooms').doc(l.id).delete().catch(() => {});
+  });
+}
+function renderLeft() {
+  const now = Date.now();
+  const list = S.left.filter(l => !S.rooms.some(r => r.id === l.id) && (!l.leftAt || now - tsMs(l.leftAt) <= LEFT_DAYS * 86400000)).sort((a, b) => tsMs(b.leftAt) - tsMs(a.leftAt));
+  const el = $('leftList');
+  if (!list.length) { el.innerHTML = '<div class="empty">최근 30일 동안 나온 방이 없습니다.</div>'; return; }
+  el.innerHTML = list.map(l => {
+    const days = Math.max(0, LEFT_DAYS - Math.floor((now - tsMs(l.leftAt)) / 86400000));
+    return '<div class="leftItem"><div class="avatar">' + esc((l.name || '?').slice(0, 1)) + '</div><div class="rMid"><b>' + esc(l.name) + '</b><br><small>' + fmtShort(tsMs(l.leftAt)) + ' 나옴 · ' + days + '일 후 목록에서 사라짐</small></div>' +
+      (l.requestedAt ? '<button class="btn small gray" data-rq="' + l.id + '">다시 요청</button>' : '<button class="btn small" data-rq="' + l.id + '">재초대 요청</button>') + '</div>';
+  }).join('');
+  el.querySelectorAll('[data-rq]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.rq;
+    b.disabled = true;
+    try {
+      await db.collection('rooms').doc(id).collection('requests').doc(S.uid).set({ uid: S.uid, name: myName(), at: FV.serverTimestamp() });
+      await db.collection('users').doc(S.uid).collection('leftRooms').doc(id).update({ requestedAt: FV.serverTimestamp() });
+      toast('재초대 요청을 보냈습니다.\n방 친구가 수락하면 채팅 목록에 다시 나타납니다');
+    } catch (e) { toast('요청 실패'); b.disabled = false; }
+  });
+}
+
+async function personView(uid, name) {
+  if (!S.room) return;
+  const rid = S.room.id;
+  const el = openModal(name + '님이 올린 글', '<div class="segs"><button data-f="all" class="on">전체</button><button data-f="text">글</button><button data-f="image">사진</button><button data-f="link">링크</button></div><div class="pvList"><div class="empty">불러오는 중…</div></div><button class="btn wide gray hidden pvMore">더 보기</button>', { full: true });
+  let items = [], last = null, filter = 'all';
+  const listEl = el.querySelector('.pvList'), moreEl = el.querySelector('.pvMore');
+  const draw = () => {
+    const vis = items.filter(m => {
+      const rep = S.reports[rid + '_' + m.id];
+      if (m.deleted && !rep) return false;
+      if (m.seq <= joinSeqMe()) return false;
+      if (filter === 'all') return true;
+      if (filter === 'image') return m.type === 'image' || (rep && rep.imageData);
+      if (filter === 'link') return !!firstUrl(m.text || (rep && rep.text));
+      return (m.type === 'text' || m.type === 'link') || (rep && rep.text && !rep.imageData);
+    });
+    if (!vis.length) { listEl.innerHTML = '<div class="empty">' + (items.length ? '해당하는 글이 없습니다' : '올린 글이 없습니다') + '</div>'; return; }
+    listEl.innerHTML = vis.map(m => {
+      const rep = S.reports[rid + '_' + m.id];
+      let c;
+      if (m.deleted) c = '<div class="repTag">🔒 신고 보관 · 나에게만 보임</div>' + (rep.imageData ? '<img class="mImg" src="' + rep.imageData + '">' : '') + '<div class="pvText">' + esc(rep.text) + '</div>';
+      else if (m.type === 'image') c = '<div class="imgBox" data-img="' + esc(m.imageId) + '">' + imgHTML(m.imageId) + '</div>';
+      else c = '<div class="pvText">' + esc(m.text) + '</div>' + ytHTML(firstUrl(m.text));
+      return '<div class="pvItem" data-seq="' + m.seq + '"><div class="pvDate">' + fmtFull(tsMs(m.createdAt)) + '</div>' + c + '</div>';
+    }).join('');
+    loadImages(listEl);
+    listEl.querySelectorAll('.pvItem').forEach(x => x.onclick = e => {
+      if (e.target.closest('a')) return;
+      const seq = +x.dataset.seq;
+      closeModal();
+      later(() => jumpTo(seq));
+    });
+  };
+  const load = async () => {
+    try {
+      let q = db.collection('rooms').doc(rid).collection('messages').where('senderId', '==', uid).orderBy('seq', 'desc').limit(40);
+      if (last) q = q.startAfter(last);
+      const r = await q.get();
+      if (r.size) last = r.docs[r.docs.length - 1];
+      items = items.concat(r.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(m => m.type !== 'system'));
+      moreEl.classList.toggle('hidden', r.size < 40);
+      draw();
+    } catch (e) {
+      console.warn(e);
+      listEl.innerHTML = '<div class="empty">처음 한 번은 설정이 필요합니다.<br>설정방법.txt의 [6단계 색인 만들기]를 해 주세요.</div>';
+    }
+  };
+  el.querySelectorAll('.segs button').forEach(b => b.onclick = () => {
+    el.querySelectorAll('.segs button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); filter = b.dataset.f; draw();
+  });
+  moreEl.onclick = load;
+  load();
+}
+
+function childrenOf(pid) { return S.folders.filter(f => (f.parentId || null) === pid).sort((a, b) => (a.order || 0) - (b.order || 0)); }
+function itemsOf(fid) { return S.saved.filter(s => s.folderId === fid).sort((a, b) => tsMs(b.savedAt) - tsMs(a.savedAt)); }
+function folderById(id) { return S.folders.find(f => f.id === id); }
+function folderPath(id) { const p = []; let f = folderById(id); while (f) { p.unshift(f.name); f = f.parentId ? folderById(f.parentId) : null; } return p.length ? p : ['(삭제된 폴더)']; }
+function descendants(id) { let r = [id]; childrenOf(id).forEach(c => r = r.concat(descendants(c.id))); return r; }
+function kindIcon(k) { return k === 'image' ? '🖼️' : k === 'link' ? '🔗' : '📝'; }
+function lvClass(level) { return 'lv' + Math.min(Math.max(level || 1, 1), 4); }
+function recentKey() { return 'kkiri_recent_' + S.uid; }
+function getRecent() { try { return JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch (e) { return []; } }
+function pushRecent(id) { try { const r = getRecent().filter(x => x !== id); r.unshift(id); localStorage.setItem(recentKey(), JSON.stringify(r.slice(0, 5))); } catch (e) {} }
+
+function itemRowHTML(it, level) {
+  const who = it.roomId ? (it.senderName || '') : '직접 추가';
+  return '<div class="tItem" data-act="item" data-iid="' + it.id + '" style="margin-left:' + (14 + level * 12) + 'px"><span class="tKind">' + kindIcon(it.kind) + '</span><div class="tMid"><div class="tTitle">' + esc(it.title) + '</div><div class="tSub">' + esc(who) + ' · ' + fmtShort(tsMs(it.msgAt || it.savedAt)) + '</div></div></div>';
+}
+function folderRowsHTML(f) {
+  const kids = childrenOf(f.id), items = itemsOf(f.id), open = S.expanded.has(f.id);
+  let h = '<div class="fRow ' + lvClass(f.level) + '" style="margin-left:' + (14 + (f.level - 1) * 12) + 'px" data-act="toggle" data-fid="' + f.id + '">' +
+    '<span class="arrow">' + ((kids.length || items.length) ? (open ? '▼' : '▶') : '·') + '</span><span>📁</span><span class="fName">' + esc(f.name) + '</span>' +
+    (items.length ? '<span class="fCnt">' + items.length + '</span>' : '') +
+    '<span class="fActs"><button data-act="add" data-fid="' + f.id + '" title="자료 추가">📄</button>' + (f.level < MAX_LEVEL ? '<button data-act="sub" data-fid="' + f.id + '" title="하위 폴더">＋</button>' : '') + '<button data-act="more" data-fid="' + f.id + '">⋯</button></span></div>';
+  if (open) { items.forEach(it => h += itemRowHTML(it, f.level)); kids.forEach(k => h += folderRowsHTML(k)); }
+  return h;
+}
+function renderTreasure() {
+  const el = $('treasureList');
+  const term = S.search.trim().toLowerCase();
+  if (term) {
+    const fs = S.folders.filter(f => f.name.toLowerCase().indexOf(term) >= 0);
+    const its = S.saved.filter(s => [s.title, s.text, s.memo, s.url, s.senderName, s.roomName].some(v => v && String(v).toLowerCase().indexOf(term) >= 0));
+    if (!fs.length && !its.length) { el.innerHTML = '<div class="empty">검색 결과가 없습니다.</div>'; return; }
+    let h = '';
+    if (fs.length) h += '<div class="secTitle">폴더 ' + fs.length + '개</div>' + fs.map(f => '<div class="fRow ' + lvClass(f.level) + '" data-act="gofolder" data-fid="' + f.id + '"><span>📁</span><span class="fName">' + esc(folderPath(f.id).join(' > ')) + '</span></div>').join('');
+    if (its.length) h += '<div class="secTitle">자료 ' + its.length + '개</div>' + its.map(it => '<div class="tItem" data-act="item" data-iid="' + it.id + '"><span class="tKind">' + kindIcon(it.kind) + '</span><div class="tMid"><div class="tTitle">' + esc(it.title) + '</div><div class="tSub">📁 ' + esc(folderPath(it.folderId).join(' > ')) + '</div></div></div>').join('');
+    el.innerHTML = h;
+    return;
+  }
+  const roots = childrenOf(null);
+  if (!roots.length) { el.innerHTML = '<div class="empty">아직 폴더가 없습니다.<br>오른쪽 위 ＋ 버튼으로 폴더를 만들고<br>대화방에서 말풍선을 눌러 [⭐ 보물함에 저장]하세요.</div>'; return; }
+  el.innerHTML = roots.map(folderRowsHTML).join('');
+}
+$('treasureList').addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const act = t.dataset.act, fid = t.dataset.fid;
+  if (act === 'toggle') { if (S.expanded.has(fid)) S.expanded.delete(fid); else { S.expanded.add(fid); pushRecent(fid); } renderTreasure(); }
+  else if (act === 'add') manualAdd(fid);
+  else if (act === 'sub') createFolder(fid);
+  else if (act === 'more') folderMenu(fid);
+  else if (act === 'item') { const it = S.saved.find(s => s.id === t.dataset.iid); if (it) itemDetail(it); }
+  else if (act === 'gofolder') { let f = folderById(fid); while (f) { S.expanded.add(f.id); f = f.parentId ? folderById(f.parentId) : null; } S.search = ''; $('tSearch').value = ''; $('tSearchClear').classList.add('hidden'); renderTreasure(); }
+});
+$('tSearch').addEventListener('input', e => { S.search = e.target.value; $('tSearchClear').classList.toggle('hidden', !S.search); renderTreasure(); });
+$('tSearchClear').onclick = () => { S.search = ''; $('tSearch').value = ''; $('tSearchClear').classList.add('hidden'); renderTreasure(); };
+
+async function createFolder(parentId) {
+  const parent = parentId ? folderById(parentId) : null;
+  if (parent && parent.level >= MAX_LEVEL) { toast('4단계까지만 만들 수 있습니다'); return null; }
+  const name = await askText(parent ? '"' + parent.name + '" 하위 폴더' : '새 폴더', '', { max: 10, ph: '폴더 이름 (10자 이내)' });
+  if (!name) return null;
+  if (childrenOf(parentId || null).some(f => f.name === name)) { toast('같은 이름의 폴더가 있습니다'); return null; }
+  try {
+    const ref = await db.collection('users').doc(S.uid).collection('folders').add({ name, parentId: parentId || null, level: parent ? parent.level + 1 : 1, order: -Date.now(), createdAt: FV.serverTimestamp() });
+    if (parentId) S.expanded.add(parentId);
+    pushRecent(ref.id);
+    return ref.id;
+  } catch (e) { toast('폴더 만들기 실패'); return null; }
+}
+function folderMenu(fid) {
+  const f = folderById(fid);
+  if (!f) return;
+  sheet(f.name, [
+    { label: '✏️ 이름 변경', fn: () => renameFolder(f) },
+    { label: '⬆️ 위로', fn: () => moveFolder(f, -1) },
+    { label: '⬇️ 아래로', fn: () => moveFolder(f, 1) },
+    { label: '🗑️ 폴더 삭제', danger: true, fn: () => deleteFolder(f) }
+  ]);
+}
+async function renameFolder(f) {
+  const v = await askText('폴더 이름 변경', f.name, { max: 10 });
+  if (!v || v === f.name) return;
+  if (childrenOf(f.parentId || null).some(x => x.name === v && x.id !== f.id)) return toast('같은 이름의 폴더가 있습니다');
+  db.collection('users').doc(S.uid).collection('folders').doc(f.id).update({ name: v }).catch(() => toast('변경 실패'));
+}
+async function moveFolder(f, dir) {
+  const sib = childrenOf(f.parentId || null);
+  const i = sib.findIndex(x => x.id === f.id), j = i + dir;
+  if (j < 0 || j >= sib.length) return;
+  const col = db.collection('users').doc(S.uid).collection('folders');
+  let a = sib[i].order || 0, b = sib[j].order || 0;
+  if (a === b) b = a + dir;
+  const batch = db.batch();
+  batch.update(col.doc(sib[i].id), { order: b });
+  batch.update(col.doc(sib[j].id), { order: a });
+  batch.commit().catch(() => toast('이동 실패'));
+}
+async function deleteFolder(f) {
+  const ids = descendants(f.id);
+  const its = S.saved.filter(s => ids.indexOf(s.folderId) >= 0);
+  if (!await askConfirm('폴더 삭제', '"' + f.name + '" 폴더를 삭제할까요?\n하위 폴더 ' + (ids.length - 1) + '개, 자료 ' + its.length + '개가 함께 지워지며 복구되지 않습니다.', '삭제', true)) return;
+  try {
+    const uref = db.collection('users').doc(S.uid);
+    const ops = ids.map(id => uref.collection('folders').doc(id)).concat(its.map(s => uref.collection('saved').doc(s.id)));
+    for (const part of chunk(ops, 400)) { const b = db.batch(); part.forEach(r => b.delete(r)); await b.commit(); }
+    for (const s of its) if (s.imageId) await releaseSaved(s.imageId);
+    toast('삭제했습니다');
+  } catch (e) { toast('삭제 실패'); }
+}
+
+function pickFolder(title) {
+  return new Promise(res => {
+    let done = false;
+    const build = () => {
+      const recent = getRecent().map(folderById).filter(Boolean);
+      let h = '<div class="row" style="margin-top:0"><button class="btn small" id="pfNew">＋ 새 폴더</button></div>';
+      if (recent.length) h += '<div class="secTitle" style="margin:14px 0 4px">최근 사용</div>' + recent.map(f => '<div class="pfRow ' + lvClass(f.level) + '" data-pf="' + f.id + '">📁 ' + esc(folderPath(f.id).join(' > ')) + '</div>').join('');
+      const all = [];
+      const walk = (pid) => childrenOf(pid).forEach(f => { all.push(f); walk(f.id); });
+      walk(null);
+      h += '<div class="secTitle" style="margin:14px 0 4px">전체 폴더</div>';
+      h += all.length ? all.map(f => '<div class="pfRow ' + lvClass(f.level) + '" data-pf="' + f.id + '" style="margin-left:' + ((f.level - 1) * 14) + 'px">📁 ' + esc(f.name) + ' <small>(' + f.level + '차)</small></div>').join('') : '<div class="empty" style="padding:20px">폴더가 없습니다. 새 폴더를 만드세요.</div>';
+      return h;
+    };
+    const el = openModal(title, build(), { onClose: () => { if (!done) res(null); } });
+    const bind = () => {
+      el.querySelectorAll('[data-pf]').forEach(x => x.onclick = () => { done = true; pushRecent(x.dataset.pf); closeModal(); res(x.dataset.pf); });
+      el.querySelector('#pfNew').onclick = async () => {
+        const id = await createFolder(null);
+        if (id) { done = true; closeModal(); res(id); }
+      };
+    };
+    bind();
+  });
+}
+
+async function saveToTreasure(m) {
+  const fid = await pickFolder('보물함에 저장');
+  if (!fid) return;
+  const def = (m.type === 'image' ? '사진' : String(m.text || '').replace(/\s+/g, ' ')).slice(0, 20);
+  const title = await askText('제목 (20자 이내)', def, { max: 20 });
+  if (title === null) return;
+  const url = firstUrl(m.text);
+  const item = {
+    folderId: fid, title: title || def || '제목 없음', memo: '', kind: m.type === 'image' ? 'image' : (url ? 'link' : 'text'),
+    text: m.text || '', url, imageId: m.imageId || null, senderId: m.senderId, senderName: m.senderName || '',
+    roomId: S.room.id, roomName: S.room.name, msgId: m.id, seq: m.seq, msgAt: m.createdAt || null, savedAt: FV.serverTimestamp()
+  };
+  try {
+    await db.collection('users').doc(S.uid).collection('saved').add(item);
+    if (m.imageId) db.collection('imageMeta').doc(m.imageId).update({ savedCount: FV.increment(1) }).catch(() => {});
+    toast('⭐ 보물함에 저장했습니다');
+  } catch (e) { toast('저장 실패'); }
+}
+function itemForm(title, it) {
+  return new Promise(res => {
+    let done = false;
+    const el = openModal(title, '<label class="secTitle" style="display:block;margin:0 0 6px">제목 (20자 이내)</label><input class="inp" id="ifT" maxlength="20">' +
+      (it.roomId ? '' : '<label class="secTitle" style="display:block;margin:12px 0 6px">링크 (URL)</label><input class="inp" id="ifU" placeholder="https://">') +
+      '<label class="secTitle" style="display:block;margin:12px 0 6px">메모</label><textarea class="inp" id="ifM" rows="3" maxlength="1000"></textarea>' +
+      '<div class="row end"><button class="btn gray" id="ifNo">취소</button><button class="btn" id="ifOk">저장</button></div>', { onClose: () => { if (!done) res(null); } });
+    el.querySelector('#ifT').value = it.title || '';
+    el.querySelector('#ifM').value = it.memo || '';
+    if (!it.roomId) el.querySelector('#ifU').value = it.url || '';
+    el.querySelector('#ifNo').onclick = () => closeModal();
+    el.querySelector('#ifOk').onclick = () => {
+      const t = el.querySelector('#ifT').value.trim(), m = el.querySelector('#ifM').value.trim();
+      const u = it.roomId ? it.url : el.querySelector('#ifU').value.trim();
+      if (!t && !m && !u) return toast('내용을 입력하세요');
+      done = true; closeModal(); res({ title: t || '제목 없음', memo: m, url: u });
+    };
+  });
+}
+async function manualAdd(fid) {
+  const v = await itemForm('직접 추가 · ' + folderPath(fid).join(' > '), {});
+  if (!v) return;
+  try {
+    await db.collection('users').doc(S.uid).collection('saved').add({ folderId: fid, title: v.title, memo: v.memo, url: v.url, text: v.url, kind: v.url ? 'link' : 'text', imageId: null, roomId: null, savedAt: FV.serverTimestamp() });
+    S.expanded.add(fid);
+    toast('저장했습니다');
+  } catch (e) { toast('저장 실패'); }
+}
+function itemDetail(it) {
+  let body = '<div class="dPath">📁 ' + esc(folderPath(it.folderId).join(' > ')) + '</div>';
+  if (it.roomId) body += '<div class="dSub">' + esc(it.senderName) + ' · ' + esc(it.roomName) + ' · ' + (it.msgAt ? fmtFull(tsMs(it.msgAt)) : '') + '</div>';
+  body += '<div class="dContent">';
+  if (it.kind === 'image') body += '<div class="imgBox" data-img="' + esc(it.imageId) + '" data-save="1">' + imgHTML(it.imageId, { save: true }) + '</div>';
+  if (it.text) body += '<div>' + linkify(it.text) + '</div>';
+  else if (it.url) body += '<div>' + linkify(it.url) + '</div>';
+  body += ytHTML(it.url || firstUrl(it.text)) + '</div>';
+  if (it.memo) body += '<div class="dMemo">📝 ' + esc(it.memo) + '</div>';
+  body += '<div class="dBtns">' + (it.roomId ? '<button class="btn" data-a="orig">💬 원본 대화</button>' : '') + (it.text ? '<button class="btn gray" data-a="copy">📋 복사</button>' : '') +
+    '<button class="btn gray" data-a="edit">✏️ 수정</button><button class="btn gray" data-a="move">📁 이동</button><button class="btn danger" data-a="del">🗑️ 삭제</button></div>';
+  const el = openModal(it.title, body);
+  loadImages(el);
+  const ref = db.collection('users').doc(S.uid).collection('saved').doc(it.id);
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    const a = b.dataset.a;
+    if (a === 'orig') {
+      if (!S.rooms.some(r => r.id === it.roomId)) return toast('지금은 그 방에 없어서 원본을 볼 수 없습니다');
+      closeModal();
+      later(() => openRoom(it.roomId, it.seq));
+    } else if (a === 'copy') copyText(it.text);
+    else if (a === 'edit') {
+      closeModal();
+      await wait();
+      const v = await itemForm('자료 수정', it);
+      if (!v) return;
+      const u = { title: v.title, memo: v.memo };
+      if (!it.roomId) { u.url = v.url; u.text = v.url; u.kind = v.url ? 'link' : 'text'; }
+      ref.update(u).catch(() => toast('수정 실패'));
+    } else if (a === 'move') {
+      closeModal();
+      await wait();
+      const fid = await pickFolder('어느 폴더로 이동할까요?');
+      if (!fid || fid === it.folderId) return;
+      ref.update({ folderId: fid }).then(() => toast('이동했습니다')).catch(() => toast('이동 실패'));
+    } else if (a === 'del') {
+      closeModal();
+      await wait();
+      if (!await askConfirm('자료 삭제', '"' + it.title + '"을(를) 삭제할까요?\n복구되지 않습니다.', '삭제', true)) return;
+      try { await ref.delete(); if (it.imageId) releaseSaved(it.imageId); toast('삭제했습니다'); }
+      catch (e) { toast('삭제 실패'); }
+    }
+  });
+}
+
+function renderSettings() {
+  const bytes = S.stats.bytes || 0;
+  const pct = Math.min(100, Math.round(bytes / PURGE_BYTES * 100));
+  const box = $('settingsBox');
+  box.innerHTML =
+    '<div class="card"><h3>👤 내 정보</h3><p>닉네임: <b style="color:var(--txt)">' + esc(myName()) + '</b></p><p>' + esc((auth.currentUser && auth.currentUser.email) || '') + '</p><button class="btn small" id="stName" style="margin-top:10px">닉네임 변경</button></div>' +
+    '<div class="card"><h3>📦 사진 저장 공간 (모두 함께 사용)</h3><div class="bar"><div style="width:' + pct + '%"></div></div><p>' + (bytes / MB).toFixed(1) + 'MB / ' + (PURGE_BYTES / MB) + 'MB</p>' +
+    '<p style="margin-top:8px">· 사진은 자동으로 작게 압축됩니다.<br>· ' + (PURGE_BYTES / MB) + 'MB를 넘으면 가장 오래된 사진부터 자동 삭제됩니다. (보물함에 저장한 사진 포함)<br>· 삭제될 차례가 가까운 사진에는 ⏳ 표시가 붙으니 폰에 저장하세요.<br>· 글과 링크는 삭제되지 않습니다.<br>· 영상은 유튜브 등 링크로 공유해 주세요.</p></div>' +
+    '<div class="card"><h3>⭐ 보물함 백업</h3><p>폰을 바꾸거나 만일을 대비해 보물함을 파일로 보관하세요. 복원하면 지금 보물함에 더해집니다.</p><div class="row"><button class="btn small" id="stBackup">💾 백업</button><button class="btn small gray" id="stRestore">📁 복원</button></div></div>' +
+    '<div class="card"><h3>ℹ️ 끼리톡</h3><p>앱월드 · 문의 fbi1588@hanmail.net</p><button class="btn small gray" id="stLogout" style="margin-top:10px">로그아웃</button></div>';
+  $('stName').onclick = changeName;
+  $('stBackup').onclick = backup;
+  $('stRestore').onclick = () => $('restoreFile').click();
+  $('stLogout').onclick = async () => { if (await askConfirm('로그아웃', '로그아웃할까요?', '로그아웃')) auth.signOut(); };
+}
+async function changeName() {
+  const v = await askText('닉네임 변경 (10자 이내)', myName(), { max: 10 });
+  if (!v || v === myName()) return;
+  try {
+    await db.collection('users').doc(S.uid).update({ name: v });
+    for (const part of chunk(S.rooms, 400)) {
+      const b = db.batch();
+      part.forEach(r => { const u = {}; u['memberNames.' + S.uid] = v; b.update(db.collection('rooms').doc(r.id), u); });
+      await b.commit();
+    }
+    S.me = Object.assign({}, S.me, { name: v });
+    renderSettings();
+    toast('닉네임을 바꿨습니다');
+  } catch (e) { toast('변경 실패'); }
+}
+async function backup() {
+  toast('백업 준비 중…');
+  const images = {};
+  for (const it of S.saved) {
+    if (it.imageId && !images[it.imageId]) { const im = await getImage(it.imageId); if (im) images[it.imageId] = im.data; }
+  }
+  const strip = o => { const r = {}; Object.keys(o).forEach(k => { const v = o[k]; r[k] = (v && typeof v === 'object' && (v.toMillis || v.seconds != null)) ? tsMs(v) : v; }); return r; };
+  const data = { app: 'kkiritalk', version: 1, exportDate: new Date().toISOString(), folders: S.folders.map(strip), saved: S.saved.map(strip), images };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const d = new Date();
+  downloadData(url, '끼리톡_보물함_백업_' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + '.json');
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast('백업 파일을 저장했습니다');
+}
+$('restoreFile').onchange = e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    let data;
+    try { data = JSON.parse(ev.target.result); } catch (err) { return toast('파일을 읽을 수 없습니다'); }
+    if (!data || data.app !== 'kkiritalk' || !Array.isArray(data.folders)) return toast('끼리톡 백업 파일이 아닙니다');
+    if (!await askConfirm('복원', '폴더 ' + data.folders.length + '개, 자료 ' + (data.saved || []).length + '개를 지금 보물함에 더할까요?', '복원')) return;
+    toast('복원 중…');
+    try {
+      const uref = db.collection('users').doc(S.uid);
+      const map = {};
+      const fs = data.folders.slice().sort((a, b) => (a.level || 1) - (b.level || 1));
+      for (const part of chunk(fs, 400)) {
+        const b = db.batch();
+        part.forEach(fo => {
+          const ref = uref.collection('folders').doc();
+          map[fo.id] = ref.id;
+          b.set(ref, { name: String(fo.name || '폴더').slice(0, 10), parentId: fo.parentId ? (map[fo.parentId] || null) : null, level: fo.level || 1, order: fo.order || 0, createdAt: FV.serverTimestamp() });
+        });
+        await b.commit();
+      }
+      const imgMap = {};
+      for (const it of (data.saved || [])) {
+        if (!it.imageId || imgMap[it.imageId]) continue;
+        const existing = await getImage(it.imageId);
+        if (existing) { imgMap[it.imageId] = it.imageId; continue; }
+        const raw = (data.images || {})[it.imageId];
+        if (!raw) continue;
+        const ir = db.collection('images').doc();
+        const b = db.batch();
+        b.set(ir, { data: raw, bytes: raw.length, ownerId: S.uid, createdAt: FV.serverTimestamp() });
+        b.set(db.collection('imageMeta').doc(ir.id), { bytes: raw.length, ownerId: S.uid, createdAt: FV.serverTimestamp(), savedCount: 0, msgDeleted: true });
+        b.set(db.collection('stats').doc('usage'), { bytes: FV.increment(raw.length) }, { merge: true });
+        await b.commit();
+        imgMap[it.imageId] = ir.id;
+      }
+      for (const part of chunk(data.saved || [], 400)) {
+        const b = db.batch();
+        part.forEach(it => {
+          const ref = uref.collection('saved').doc();
+          const o = Object.assign({}, it);
+          delete o.id;
+          o.folderId = map[it.folderId] || null;
+          o.imageId = it.imageId ? (imgMap[it.imageId] || null) : null;
+          o.msgAt = it.msgAt ? TS.fromMillis(it.msgAt) : null;
+          o.savedAt = it.savedAt ? TS.fromMillis(it.savedAt) : FV.serverTimestamp();
+          if (o.folderId) b.set(ref, o);
+        });
+        await b.commit();
+      }
+      for (const it of (data.saved || [])) {
+        const nid = it.imageId && imgMap[it.imageId];
+        if (nid && map[it.folderId]) await db.collection('imageMeta').doc(nid).update({ savedCount: FV.increment(1) }).catch(() => {});
+      }
+      checkStorage();
+      toast('복원했습니다');
+    } catch (err) { console.warn(err); toast('복원 중 오류가 났습니다'); }
+  };
+  reader.readAsText(f);
+};
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
+</script>
+</body>
+</html>
