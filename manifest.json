@@ -1,6 +1,6 @@
 {
-  "name": "끼리톡",
-  "short_name": "끼리톡",
+  "name": "끼톡",
+  "short_name": "끼톡",
   "description": "우리끼리 수다, 보물처럼 간직",
   "start_url": "./",
   "scope": "./",
