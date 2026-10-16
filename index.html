@@ -9,6 +9,23 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  var url = location.href;
+  var isAndroid = /Android/i.test(ua);
+  var inApp = /KAKAOTALK|NAVER\(inapp|DaumApps|Line\/|FBAN|FBAV|Instagram|everytimeApp|BAND\//i.test(ua) || (isAndroid && /; wv\)/.test(ua));
+  if (!inApp) return;
+  window.__inApp = true;
+  if (/KAKAOTALK/i.test(ua)) {
+    location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+  } else if (/Line\//i.test(ua)) {
+    location.href = url + (url.indexOf('?') < 0 ? '?' : '&') + 'openExternalBrowser=1';
+  } else if (isAndroid) {
+    location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;end';
+  }
+})();
+</script>
 <style>
 :root{
   --c:#DC143C;--cd:#A50E2D;--cdd:#7A0A21;--cl:#FDE8EC;--cll:#FFF5F7;
@@ -207,10 +224,24 @@ mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
 .memberRow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
 .memberRow .mAvatar{width:36px;height:36px}
 .memberRow b{flex:1;font-weight:600}
+#inAppGuide{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,var(--c) 0%,var(--cdd) 100%);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px}
+#inAppGuide h2{font-size:22px;font-weight:800;margin:14px 0 8px}
+#inAppGuide p{font-size:15px;opacity:.95;line-height:1.7}
+#inAppGuide .urlBox{background:rgba(255,255,255,.15);border-radius:12px;padding:10px 14px;margin:18px 0 12px;font-size:14px;word-break:break-all}
+#inAppGuide .btn{background:#fff;color:var(--cd);margin:6px}
 #toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(42,26,30,.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;z-index:99;max-width:86%;text-align:center;white-space:pre-line}
 </style>
 </head>
 <body>
+
+<div id="inAppGuide" class="hidden">
+  <div class="logo">💬</div>
+  <h2>크롬에서 열어 주세요</h2>
+  <p>카톡·네이버 앱 안에서는<br>구글 로그인이 되지 않습니다.</p>
+  <div class="urlBox" id="inAppUrl"></div>
+  <div><button class="btn" id="inAppCopy">주소 복사</button><button class="btn" id="inAppChrome">크롬으로 열기</button></div>
+  <p style="margin-top:16px;font-size:13px">안 열리면 화면의 ⋮ 메뉴에서<br>[다른 브라우저로 열기]를 누르세요.</p>
+</div>
 
 <div id="loadingScreen" class="screen center splash">
   <div class="logo">💬</div>
@@ -313,6 +344,23 @@ const firebaseConfig = {
   messagingSenderId: "233850523426",
   appId: "1:233850523426:web:696af3715b1253d3115f7b"
 };
+
+if (window.__inApp) {
+  setTimeout(function () {
+    var g = document.getElementById('inAppGuide');
+    document.getElementById('inAppUrl').textContent = location.href.split('?')[0];
+    g.classList.remove('hidden');
+    document.getElementById('inAppCopy').onclick = function () {
+      var u = location.href.split('?')[0];
+      if (navigator.clipboard) navigator.clipboard.writeText(u).then(function () { alert('주소를 복사했습니다. 크롬 주소창에 붙여넣으세요.'); }).catch(function () { prompt('아래 주소를 복사하세요', u); });
+      else prompt('아래 주소를 복사하세요', u);
+    };
+    document.getElementById('inAppChrome').onclick = function () {
+      if (/Android/i.test(navigator.userAgent)) location.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end';
+      else location.href = 'googlechrome://' + location.host + location.pathname;
+    };
+  }, 1200);
+}
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
