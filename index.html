@@ -113,6 +113,15 @@ textarea.inp{resize:vertical;min-height:80px}
 .roomTitle{flex:1;min-width:0}
 .roomTitle b{display:block;font-size:16.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roomTitle small{opacity:.85;font-size:12px}
+.roomHead #roomSearchBtn{font-size:21px}
+.searchBar{display:flex;align-items:center;gap:4px;background:#fff;border-bottom:1px solid var(--line);padding:7px 8px}
+.searchBar input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;outline:none;background:var(--cll)}
+.searchBar input:focus{border-color:var(--c);background:#fff}
+.searchBar #sCount{font-size:12.5px;color:var(--cd);font-weight:700;min-width:44px;text-align:center;white-space:nowrap}
+.searchBar button{width:34px;height:34px;border-radius:10px;font-size:15px;color:var(--cdd);background:#F4E9EB;flex-shrink:0}
+.searchBar button:active{background:var(--cl)}
+.searchBar #sGo{width:auto;padding:0 12px;background:var(--c);color:#fff;font-weight:700;font-size:13.5px}
+mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
 .noticeBar{background:#fff;border-bottom:1px solid var(--line);padding:9px 14px;display:flex;gap:8px;align-items:flex-start;font-size:13.5px}
 .noticeBar .nText{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .noticeBar.open .nText{white-space:pre-wrap}
@@ -143,9 +152,9 @@ textarea.inp{resize:vertical;min-height:80px}
 .mine .bubble .lnk{color:#FFE3E8}
 .bubble .lnk{color:var(--cd);text-decoration:underline;word-break:break-all}
 .bubble.del{background:rgba(255,255,255,.55)!important;color:var(--sub)!important;font-style:italic;font-size:13.5px}
-.bubble.rep{background:#FFF8E6!important;color:var(--txt)!important;border:1.5px dashed var(--gold)}
-.repTag{font-size:11.5px;font-weight:700;color:#8A4A00;margin-bottom:4px}
-.repMark{font-size:11px;opacity:.75;margin-top:3px}
+.bubble.hasMenu{position:relative;padding-bottom:26px;min-width:64px}
+.bMenu{position:absolute;right:6px;bottom:4px;height:20px;padding:0 9px;border-radius:10px;background:rgba(0,0,0,.07);color:var(--cdd);font-size:15px;font-weight:800;line-height:20px;letter-spacing:1px}
+.mine .bMenu{background:rgba(255,255,255,.25);color:#fff}
 .edited{font-size:11px;opacity:.7;margin-top:2px}
 .imgBox{min-width:120px}
 .mImg{display:block;max-width:100%;max-height:300px;border-radius:10px}
@@ -186,7 +195,7 @@ textarea.inp{resize:vertical;min-height:80px}
 .pvItem{border-bottom:1px solid var(--line);padding:10px 2px}
 .pvItem:active{background:var(--cll)}
 .pvDate{font-size:12px;color:var(--sub);margin-bottom:3px}
-.pvText{font-size:14px;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.pvText{font-size:14px;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:4;line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .pvItem .mImg{max-height:160px}
 .dPath{font-size:12.5px;color:var(--cd);font-weight:700}
 .dSub{font-size:12.5px;color:var(--sub);margin-top:3px}
@@ -262,8 +271,17 @@ textarea.inp{resize:vertical;min-height:80px}
   <header class="roomHead">
     <button id="roomBack">‹</button>
     <div class="roomTitle"><b id="roomName"></b><small id="roomCount"></small></div>
+    <button id="roomSearchBtn" title="검색">🔍</button>
     <button id="roomMenuBtn">☰</button>
   </header>
+  <div id="searchBar" class="searchBar hidden">
+    <input id="sInput" maxlength="50" placeholder="대화 내용 검색" enterkeyhint="search">
+    <button id="sGo">검색</button>
+    <span id="sCount"></span>
+    <button id="sUp" title="이전 결과">▲</button>
+    <button id="sDown" title="다음 결과">▼</button>
+    <button id="sClose" title="닫기">✕</button>
+  </div>
   <div id="noticeBar" class="noticeBar hidden"><span>📢</span><div class="nText" id="noticeText"></div><button id="noticeHide">✕</button></div>
   <div id="reqBar" class="reqBar hidden"></div>
   <div id="msgArea">
@@ -308,16 +326,17 @@ const WARN_BYTES = 600 * MB;
 const PURGE_BYTES = 700 * MB;
 const PURGE_TO = 600 * MB;
 const WARN_CHUNK = 100 * MB;
-const MAX_LEVEL = 4;
+const MAX_LEVEL = 1;
 const PAGE = 50;
 const LEFT_DAYS = 30;
 const MAX_TEXT = 2000;
 
 const S = {
-  uid: null, me: null, users: {}, rooms: [], reports: {}, folders: [], saved: [], left: [], stats: {},
+  uid: null, me: null, users: {}, rooms: [], folders: [], saved: [], left: [], stats: {},
   unsubs: [], room: null, msgUnsub: null, reqUnsub: null, msgs: [], hasMore: false, limit: PAGE,
   mode: 'live', jumpMsgs: [], jumpHasNext: false, highlight: null, requests: [],
-  imgCache: {}, expanded: new Set(), tab: 'chats', search: '', sending: false, readPending: 0
+  imgCache: {}, expanded: new Set(), tab: 'chats', search: '', sending: false, readPending: 0,
+  srTerm: '', srHits: [], srIdx: -1, srCache: null, srBusy: false
 };
 
 const $ = id => document.getElementById(id);
@@ -445,7 +464,7 @@ function stopAll() {
   S.unsubs.forEach(u => u());
   S.unsubs = [];
   stopRoomListeners();
-  S.room = null; S.rooms = []; S.users = {}; S.reports = {}; S.folders = []; S.saved = []; S.left = []; S.stats = {};
+  S.room = null; S.rooms = []; S.users = {}; S.folders = []; S.saved = []; S.left = []; S.stats = {};
   S.imgCache = {};
 }
 function listen(q, fn) { S.unsubs.push(q.onSnapshot(fn, e => console.warn(e))); }
@@ -472,11 +491,6 @@ function startApp() {
       if (r) { S.room = r; renderRoomHead(); renderMsgs(); markRead(); }
     }
     updateBadges();
-  });
-  listen(uref.collection('reports'), snap => {
-    S.reports = {};
-    snap.forEach(d => S.reports[d.id] = d.data());
-    if (S.room) renderMsgs();
   });
   listen(uref.collection('folders'), snap => {
     S.folders = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
@@ -572,6 +586,7 @@ async function openRoom(id, jumpSeq) {
     } catch (e) { return toast('방에 들어갈 수 없습니다'); }
   }
   S.room = r; S.limit = PAGE; S.mode = 'live'; S.msgs = []; S.jumpMsgs = []; S.highlight = null; S.readPending = 0;
+  srReset(true);
   $('msgList').innerHTML = '';
   $('msgInput').value = '';
   $('backToLiveBtn').classList.add('hidden');
@@ -674,20 +689,15 @@ document.addEventListener('click', e => {
 }, true);
 
 function bubbleHTML(m) {
-  const rep = S.reports[S.room.id + '_' + m.id];
-  if (m.deleted) {
-    if (rep) return '<div class="bubble rep" data-id="' + m.id + '"><div class="repTag">🔒 신고 보관 · 나에게만 보임</div>' +
-      (rep.imageData ? '<img class="mImg" src="' + rep.imageData + '">' : '') + (rep.text ? '<div>' + linkify(rep.text) + '</div>' : '') + '</div>';
-    return '<div class="bubble del" data-id="' + m.id + '">삭제된 메시지입니다</div>';
-  }
+  if (m.deleted) return '<div class="bubble del" data-id="' + m.id + '">삭제된 메시지입니다</div>';
   let inner;
   if (m.type === 'image') {
     const cached = m.imageId && Object.prototype.hasOwnProperty.call(S.imgCache, m.imageId);
     inner = '<div class="imgBox" data-img="' + esc(m.imageId) + '"' + (cached ? ' data-done="1"' : '') + '>' + imgHTML(m.imageId) + '</div>';
   } else {
-    inner = linkify(m.text) + ytHTML(firstUrl(m.text));
+    inner = hlTerm(linkify(m.text)) + ytHTML(firstUrl(m.text));
   }
-  return '<div class="bubble" data-id="' + m.id + '">' + inner + (m.edited ? '<div class="edited">수정됨</div>' : '') + (rep ? '<div class="repMark">🔒 신고함</div>' : '') + '</div>';
+  return '<div class="bubble hasMenu" data-id="' + m.id + '">' + inner + (m.edited ? '<div class="edited">수정됨</div>' : '') + '<button class="bMenu" title="메뉴">⋯</button></div>';
 }
 function metaHTML(un, showTime, ms) {
   return '<div class="mMeta">' + (un > 0 ? '<span class="unread">' + un + '</span>' : '') + (showTime ? '<span class="mTime">' + fmtTime(ms) + '</span>' : '') + '</div>';
@@ -723,6 +733,15 @@ function renderMsgs() {
 }
 
 $('msgList').addEventListener('click', e => {
+  const mb = e.target.closest('.bMenu');
+  if (mb) {
+    e.preventDefault();
+    const bb = mb.closest('.bubble');
+    const ml = S.mode === 'live' ? S.msgs : S.jumpMsgs;
+    const mm = bb && ml.find(x => x.id === bb.dataset.id);
+    if (mm) msgMenu(mm);
+    return;
+  }
   if (e.target.closest('a') || e.target.closest('[data-dl]')) return;
   if (e.target.id === 'jumpNext') { jumpNext(); return; }
   const nm = e.target.closest('[data-uid]');
@@ -912,15 +931,8 @@ async function releaseSaved(id) {
 function msgRef(m) { return db.collection('rooms').doc(S.room.id).collection('messages').doc(m.id); }
 function msgMenu(m) {
   const mine = m.senderId === S.uid;
-  const rep = S.reports[S.room.id + '_' + m.id];
   const items = [];
-  if (m.deleted) {
-    if (!rep) return;
-    if (rep.imageData) items.push({ label: '🔍 크게 보기', fn: () => viewImage(rep.imageData) });
-    if (rep.text) items.push({ label: '📋 복사', fn: () => copyText(rep.text) });
-    sheet('신고 보관 메시지', items);
-    return;
-  }
+  if (m.deleted) return;
   if (m.type === 'image') items.push({ label: '🔍 크게 보기', fn: async () => { const im = await getImage(m.imageId); if (im) viewImage(im.data); else toast('삭제된 사진입니다'); } });
   if (m.type === 'image') items.push({ label: '📥 폰에 저장', fn: async () => { const im = await getImage(m.imageId); if (im) downloadData(im.data, 'kkiritalk_' + Date.now() + '.jpg'); else toast('삭제된 사진입니다'); } });
   if (m.text) items.push({ label: '📋 복사', fn: () => copyText(m.text) });
@@ -928,7 +940,6 @@ function msgMenu(m) {
   if (!mine) items.push({ label: '👤 ' + (m.senderName || '친구') + '님 글 모아보기', fn: () => personView(m.senderId, m.senderName || '친구') });
   if (mine && m.type !== 'image') items.push({ label: '✏️ 수정', fn: () => editMsg(m) });
   if (mine) items.push({ label: '🗑️ 삭제', danger: true, fn: () => deleteMsg(m) });
-  if (!mine && !rep) items.push({ label: '🚨 신고 (지워도 나에게 보관)', danger: true, fn: () => reportMsg(m) });
   sheet('메시지', items);
 }
 function copyText(t) {
@@ -952,18 +963,6 @@ async function deleteMsg(m) {
     if (m.imageId) releaseImage(m.imageId);
     if (S.room && m.seq === S.room.msgCount) db.collection('rooms').doc(S.room.id).update({ lastMessage: '삭제된 메시지입니다' }).catch(() => {});
   } catch (e) { toast('삭제 실패'); }
-}
-async function reportMsg(m) {
-  if (!await askConfirm('신고', '이 메시지를 신고할까요?\n상대가 나중에 지우거나 방을 나가도\n내 폰에서는 원래 내용이 계속 보입니다.', '신고', true)) return;
-  let imageData = '';
-  if (m.imageId) { const im = await getImage(m.imageId); imageData = im ? im.data : ''; }
-  try {
-    await db.collection('users').doc(S.uid).collection('reports').doc(S.room.id + '_' + m.id).set({
-      roomId: S.room.id, roomName: S.room.name, msgId: m.id, seq: m.seq, senderId: m.senderId, senderName: m.senderName || '',
-      text: m.text || '', imageData, type: m.type, msgAt: m.createdAt || null, reportedAt: FV.serverTimestamp()
-    });
-    toast('신고했습니다. 이 메시지는 나에게 보관됩니다');
-  } catch (e) { toast('신고 실패'); }
 }
 
 async function loadMore() {
@@ -1013,6 +1012,101 @@ function backToLive() {
   markRead();
 }
 $('backToLiveBtn').onclick = backToLive;
+
+const SEARCH_PAGE = 200;
+function hlTerm(html) {
+  if (!S.srTerm) return html;
+  const re = new RegExp(esc(S.srTerm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return html.split(/(<[^>]+>)/).map(part => part.charAt(0) === '<' ? part : part.replace(re, x => '<mark class="hit">' + x + '</mark>')).join('');
+}
+function srReset(hideBar) {
+  S.srTerm = ''; S.srHits = []; S.srIdx = -1; S.srBusy = false;
+  $('sCount').textContent = '';
+  if (hideBar) { $('searchBar').classList.add('hidden'); $('sInput').value = ''; S.srCache = null; }
+}
+function srMatch(m, t) {
+  return m.type !== 'system' && !m.deleted && m.seq > joinSeqMe() && String(m.text || '').toLowerCase().indexOf(t) >= 0;
+}
+function srRebuild() {
+  const live = {};
+  S.msgs.forEach(m => live[m.seq] = m);
+  S.srHits = S.srCache.list.map(m => live[m.seq] || m).filter(m => srMatch(m, S.srTerm)).map(m => m.seq);
+}
+async function srLoadOlder() {
+  const c = S.srCache;
+  if (c.done) return;
+  let q = db.collection('rooms').doc(S.room.id).collection('messages');
+  if (c.oldest !== null) q = q.where('seq', '<', c.oldest);
+  const r = await q.orderBy('seq', 'desc').limit(SEARCH_PAGE).get();
+  r.docs.forEach(d => c.list.push(Object.assign({ id: d.id }, d.data())));
+  if (r.size) { c.oldest = r.docs[r.size - 1].data().seq; if (c.newest === null) c.newest = r.docs[0].data().seq; }
+  if (r.size < SEARCH_PAGE || (c.oldest !== null && c.oldest <= joinSeqMe() + 1)) c.done = true;
+}
+async function srLoadNewer() {
+  const c = S.srCache;
+  if (c.newest === null) return;
+  const r = await db.collection('rooms').doc(S.room.id).collection('messages').where('seq', '>', c.newest).orderBy('seq', 'desc').limit(500).get();
+  if (!r.size) return;
+  c.list = r.docs.map(d => Object.assign({ id: d.id }, d.data())).concat(c.list);
+  c.newest = r.docs[0].data().seq;
+}
+async function srCollect(need) {
+  srRebuild();
+  while (S.srHits.length < need && !S.srCache.done) { await srLoadOlder(); srRebuild(); }
+}
+function srShowCount() {
+  $('sCount').textContent = S.srHits.length ? (S.srIdx + 1) + '/' + S.srHits.length + (S.srCache.done ? '' : '+') : '0';
+}
+function srGo() {
+  srShowCount();
+  jumpTo(S.srHits[S.srIdx]);
+}
+async function runSearch() {
+  const t = $('sInput').value.trim().toLowerCase();
+  if (!t || S.srBusy || !S.room) return;
+  $('sInput').blur();
+  if (!S.srCache || S.srCache.roomId !== S.room.id) S.srCache = { roomId: S.room.id, list: [], oldest: null, newest: null, done: false };
+  S.srBusy = true; S.srTerm = t; S.srHits = []; S.srIdx = -1;
+  $('sCount').textContent = '찾는 중';
+  try {
+    await srLoadNewer();
+    await srCollect(1);
+    if (!S.srHits.length) { $('sCount').textContent = '0'; toast('검색 결과가 없습니다'); if (S.mode === 'live') renderMsgs(); }
+    else { S.srIdx = 0; srGo(); }
+  } catch (e) { console.warn(e); $('sCount').textContent = ''; toast('검색 실패. 인터넷을 확인하세요'); }
+  S.srBusy = false;
+}
+$('roomSearchBtn').onclick = () => {
+  const bar = $('searchBar');
+  if (!bar.classList.contains('hidden')) { closeSearch(); return; }
+  bar.classList.remove('hidden');
+  setTimeout(() => $('sInput').focus(), 50);
+};
+function closeSearch() {
+  srReset(true);
+  if (S.mode !== 'live') backToLive(); else renderMsgs();
+}
+$('sClose').onclick = closeSearch;
+$('sGo').onclick = runSearch;
+$('sInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+$('sInput').addEventListener('input', () => { if (S.srTerm && $('sInput').value.trim().toLowerCase() !== S.srTerm) { S.srTerm = ''; S.srHits = []; S.srIdx = -1; $('sCount').textContent = ''; } });
+$('sUp').onclick = async () => {
+  if (!S.srTerm) { runSearch(); return; }
+  if (S.srBusy) return;
+  if (S.srIdx + 1 >= S.srHits.length) {
+    if (S.srCache.done) { toast('더 이전 결과가 없습니다'); return; }
+    S.srBusy = true; $('sCount').textContent = '찾는 중';
+    try { await srCollect(S.srHits.length + 1); } catch (e) { toast('검색 실패'); }
+    S.srBusy = false;
+    if (S.srIdx + 1 >= S.srHits.length) { srShowCount(); toast('더 이전 결과가 없습니다'); return; }
+  }
+  S.srIdx++; srGo();
+};
+$('sDown').onclick = () => {
+  if (!S.srTerm || S.srBusy) return;
+  if (S.srIdx <= 0) { toast('가장 최근 결과입니다'); return; }
+  S.srIdx--; srGo();
+};
 
 $('roomMenuBtn').onclick = () => {
   const r = S.room;
@@ -1185,20 +1279,17 @@ async function personView(uid, name) {
   const listEl = el.querySelector('.pvList'), moreEl = el.querySelector('.pvMore');
   const draw = () => {
     const vis = items.filter(m => {
-      const rep = S.reports[rid + '_' + m.id];
-      if (m.deleted && !rep) return false;
+      if (m.deleted) return false;
       if (m.seq <= joinSeqMe()) return false;
       if (filter === 'all') return true;
-      if (filter === 'image') return m.type === 'image' || (rep && rep.imageData);
-      if (filter === 'link') return !!firstUrl(m.text || (rep && rep.text));
-      return (m.type === 'text' || m.type === 'link') || (rep && rep.text && !rep.imageData);
+      if (filter === 'image') return m.type === 'image';
+      if (filter === 'link') return !!firstUrl(m.text);
+      return m.type === 'text' || m.type === 'link';
     });
     if (!vis.length) { listEl.innerHTML = '<div class="empty">' + (items.length ? '해당하는 글이 없습니다' : '올린 글이 없습니다') + '</div>'; return; }
     listEl.innerHTML = vis.map(m => {
-      const rep = S.reports[rid + '_' + m.id];
       let c;
-      if (m.deleted) c = '<div class="repTag">🔒 신고 보관 · 나에게만 보임</div>' + (rep.imageData ? '<img class="mImg" src="' + rep.imageData + '">' : '') + '<div class="pvText">' + esc(rep.text) + '</div>';
-      else if (m.type === 'image') c = '<div class="imgBox" data-img="' + esc(m.imageId) + '">' + imgHTML(m.imageId) + '</div>';
+      if (m.type === 'image') c = '<div class="imgBox" data-img="' + esc(m.imageId) + '">' + imgHTML(m.imageId) + '</div>';
       else c = '<div class="pvText">' + esc(m.text) + '</div>' + ytHTML(firstUrl(m.text));
       return '<div class="pvItem" data-seq="' + m.seq + '"><div class="pvDate">' + fmtFull(tsMs(m.createdAt)) + '</div>' + c + '</div>';
     }).join('');
@@ -1289,7 +1380,6 @@ $('tSearchClear').onclick = () => { S.search = ''; $('tSearch').value = ''; $('t
 
 async function createFolder(parentId) {
   const parent = parentId ? folderById(parentId) : null;
-  if (parent && parent.level >= MAX_LEVEL) { toast('4단계까지만 만들 수 있습니다'); return null; }
   const name = await askText(parent ? '"' + parent.name + '" 하위 폴더' : '새 폴더', '', { max: 10, ph: '폴더 이름 (10자 이내)' });
   if (!name) return null;
   if (childrenOf(parentId || null).some(f => f.name === name)) { toast('같은 이름의 폴더가 있습니다'); return null; }
@@ -1352,7 +1442,7 @@ function pickFolder(title) {
       const walk = (pid) => childrenOf(pid).forEach(f => { all.push(f); walk(f.id); });
       walk(null);
       h += '<div class="secTitle" style="margin:14px 0 4px">전체 폴더</div>';
-      h += all.length ? all.map(f => '<div class="pfRow ' + lvClass(f.level) + '" data-pf="' + f.id + '" style="margin-left:' + ((f.level - 1) * 14) + 'px">📁 ' + esc(f.name) + ' <small>(' + f.level + '차)</small></div>').join('') : '<div class="empty" style="padding:20px">폴더가 없습니다. 새 폴더를 만드세요.</div>';
+      h += all.length ? all.map(f => '<div class="pfRow ' + lvClass(f.level) + '" data-pf="' + f.id + '" style="margin-left:' + ((f.level - 1) * 14) + 'px">📁 ' + esc(f.name) + '</div>').join('') : '<div class="empty" style="padding:20px">폴더가 없습니다. 새 폴더를 만드세요.</div>';
       return h;
     };
     const el = openModal(title, build(), { onClose: () => { if (!done) res(null); } });
