@@ -221,6 +221,9 @@ mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
 .dMemo{background:var(--cll);border-radius:10px;padding:10px 12px;font-size:14px;white-space:pre-wrap}
 .dBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
 .viewer{display:block;max-width:100%;margin:0 auto;border-radius:10px}
+.zoomBox{position:relative;height:calc(86vh - 190px);background:#1a0d10;border-radius:12px;overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+.zoomBox img{max-width:100%;max-height:100%;transform-origin:center center;will-change:transform;pointer-events:none;-webkit-user-drag:none}
+.zoomHint{text-align:center;font-size:12.5px;color:var(--sub);margin-top:8px}
 .memberRow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
 .memberRow .mAvatar{width:36px;height:36px}
 .memberRow b{flex:1;font-weight:600}
@@ -995,8 +998,77 @@ function copyText(t) {
   else toast('복사 실패');
 }
 function viewImage(data) {
-  const el = openModal('사진', '<img class="viewer" src="' + data + '"><button class="btn wide" id="viewSave">📥 폰에 저장</button>', { full: true });
+  const el = openModal('사진', '<div class="zoomBox"><img src="' + data + '" alt=""></div><div class="zoomHint">두 손가락으로 확대 · 두 번 톡톡 누르면 2배</div><button class="btn wide" id="viewSave">📥 폰에 저장</button>', { full: true });
   el.querySelector('#viewSave').onclick = () => downloadData(data, 'kkiritalk_' + Date.now() + '.jpg');
+  setupZoom(el.querySelector('.zoomBox'));
+}
+function setupZoom(box) {
+  const img = box.querySelector('img');
+  const pts = new Map();
+  let sc = 1, tx = 0, ty = 0, start = null, lastTap = 0, lastTapPos = null, moved = false;
+  const MAX = 5;
+  const rel = (e) => { const r = box.getBoundingClientRect(); return { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 }; };
+  const clamp = () => {
+    if (sc <= 1.01) { sc = 1; tx = 0; ty = 0; return; }
+    const mx = Math.max(0, (img.clientWidth * sc - box.clientWidth) / 2);
+    const my = Math.max(0, (img.clientHeight * sc - box.clientHeight) / 2);
+    tx = Math.min(mx, Math.max(-mx, tx));
+    ty = Math.min(my, Math.max(-my, ty));
+  };
+  const apply = () => { img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')'; };
+  const begin = () => {
+    const a = Array.from(pts.values());
+    if (a.length >= 2) {
+      const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1;
+      start = { two: true, d, s: sc, x: tx, y: ty, m: { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2 } };
+    } else if (a.length === 1) {
+      start = { two: false, p: a[0], x: tx, y: ty };
+    } else start = null;
+  };
+  box.addEventListener('pointerdown', e => {
+    box.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, rel(e));
+    if (pts.size === 1) moved = false;
+    begin();
+  });
+  box.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId) || !start) return;
+    pts.set(e.pointerId, rel(e));
+    const a = Array.from(pts.values());
+    if (start.two && a.length >= 2) {
+      const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1;
+      const m = { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2 };
+      sc = Math.min(MAX, Math.max(1, start.s * d / start.d));
+      const k = sc / start.s;
+      tx = m.x - (start.m.x - start.x) * k;
+      ty = m.y - (start.m.y - start.y) * k;
+      moved = true;
+    } else if (!start.two && a.length === 1) {
+      const dx = a[0].x - start.p.x, dy = a[0].y - start.p.y;
+      if (Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+      if (sc > 1) { tx = start.x + dx; ty = start.y + dy; }
+    }
+    clamp(); apply();
+  });
+  const end = e => {
+    if (!pts.has(e.pointerId)) return;
+    const p = pts.get(e.pointerId);
+    pts.delete(e.pointerId);
+    if (pts.size === 0 && !moved && e.type === 'pointerup') {
+      const now = Date.now();
+      if (now - lastTap < 320 && lastTapPos && Math.hypot(p.x - lastTapPos.x, p.y - lastTapPos.y) < 30) {
+        if (sc > 1) { sc = 1; tx = 0; ty = 0; }
+        else { sc = 2; tx = -p.x; ty = -p.y; }
+        img.style.transition = 'transform .2s';
+        clamp(); apply();
+        setTimeout(() => { img.style.transition = ''; }, 220);
+        lastTap = 0;
+      } else { lastTap = now; lastTapPos = p; }
+    }
+    begin();
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
 }
 async function editMsg(m) {
   const v = await askText('메시지 수정', m.text, { multi: true, max: MAX_TEXT });
