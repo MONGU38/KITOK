@@ -1372,8 +1372,9 @@ function subscribeRequests() {
 function cleanLeft() {
   const now = Date.now();
   S.left.forEach(l => {
-    const inRoom = S.rooms.some(r => r.id === l.id);
-    const old = l.leftAt && now - tsMs(l.leftAt) > LEFT_DAYS * 86400000;
+    const age = l.leftAt ? now - tsMs(l.leftAt) : 0;
+    const inRoom = S.rooms.some(r => r.id === l.id) && age > 60000;
+    const old = age > LEFT_DAYS * 86400000;
     if (inRoom || old) db.collection('users').doc(S.uid).collection('leftRooms').doc(l.id).delete().catch(() => {});
   });
 }
