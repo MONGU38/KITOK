@@ -110,6 +110,8 @@ main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .bar div{height:100%;background:linear-gradient(90deg,var(--c),var(--cdd));border-radius:6px}
 .leftItem{display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px}
 .leftItem .rMid small{color:var(--sub);font-size:12.5px}
+.leftDel{width:32px;height:32px;border-radius:10px;color:var(--sub);font-size:15px;flex-shrink:0}
+.leftDel:active{background:var(--cl)}
 
 .btn{background:var(--c);color:#fff;font-weight:700;padding:10px 16px;border-radius:12px;font-size:14.5px}
 .btn:active{background:var(--cd)}
@@ -1386,7 +1388,8 @@ function renderLeft() {
   el.innerHTML = list.map(l => {
     const days = Math.max(0, LEFT_DAYS - Math.floor((now - tsMs(l.leftAt)) / 86400000));
     return '<div class="leftItem"><div class="avatar">' + esc((l.name || '?').slice(0, 1)) + '</div><div class="rMid"><b>' + esc(l.name) + '</b><br><small>' + fmtShort(tsMs(l.leftAt)) + ' 나옴 · ' + days + '일 후 목록에서 사라짐</small></div>' +
-      (l.requestedAt ? '<button class="btn small gray" data-rq="' + l.id + '">다시 요청</button>' : '<button class="btn small" data-rq="' + l.id + '">재초대 요청</button>') + '</div>';
+      (l.requestedAt ? '<button class="btn small gray" data-rq="' + l.id + '">다시 요청</button>' : '<button class="btn small" data-rq="' + l.id + '">재초대 요청</button>') +
+      '<button class="leftDel" data-del="' + l.id + '" title="목록에서 삭제">✕</button></div>';
   }).join('');
   el.querySelectorAll('[data-rq]').forEach(b => b.onclick = async () => {
     const id = b.dataset.rq;
@@ -1396,6 +1399,14 @@ function renderLeft() {
       await db.collection('users').doc(S.uid).collection('leftRooms').doc(id).update({ requestedAt: FV.serverTimestamp() });
       toast('재초대 요청을 보냈습니다.\n방 친구가 수락하면 채팅 목록에 다시 나타납니다');
     } catch (e) { toast('요청 실패'); b.disabled = false; }
+  });
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const l = S.left.find(x => x.id === b.dataset.del);
+    if (!await askConfirm('목록에서 삭제', '"' + ((l && l.name) || '이 방') + '"을(를) 나간 방 목록에서 지울까요?\n지우면 이 방은 재초대 요청을 할 수 없습니다.', '삭제', true)) return;
+    try {
+      await db.collection('users').doc(S.uid).collection('leftRooms').doc(b.dataset.del).delete();
+      toast('삭제했습니다');
+    } catch (e) { toast('삭제 실패'); }
   });
 }
 
