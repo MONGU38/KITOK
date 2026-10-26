@@ -234,6 +234,13 @@ mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
 #inAppGuide p{font-size:15px;opacity:.95;line-height:1.7}
 #inAppGuide .urlBox{background:rgba(255,255,255,.15);border-radius:12px;padding:10px 14px;margin:18px 0 12px;font-size:14px;word-break:break-all}
 #inAppGuide .btn{background:#fff;color:var(--cd);margin:6px}
+.wrHead{font-size:12.5px;color:var(--sub);margin-bottom:12px}
+.wrTitle{font-size:14px;font-weight:800;color:var(--cdd);margin:14px 0 8px}
+.wrTitle.un{color:#8A4A00}
+.wrList{display:flex;flex-wrap:wrap;gap:6px}
+.wrChip{background:var(--cl);color:var(--cdd);font-size:14px;font-weight:600;padding:6px 12px;border-radius:16px}
+.wrTitle.un + .wrList .wrChip{background:#FFF4E3;color:#8A4A00}
+.wrNone{font-size:13.5px;color:var(--sub)}
 #toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(42,26,30,.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;z-index:99;max-width:86%;text-align:center;white-space:pre-line}
 </style>
 </head>
@@ -997,10 +1004,23 @@ function msgMenu(m) {
   if (m.type === 'image') items.push({ label: '📥 폰에 저장', fn: async () => { const im = await getImage(m.imageId); if (im) downloadData(im.data, 'kkiritalk_' + Date.now() + '.jpg'); else toast('삭제된 사진입니다'); } });
   if (m.text) items.push({ label: '📋 복사', fn: () => copyText(m.text) });
   items.push({ label: '⭐ 보물함에 저장', fn: () => saveToTreasure(m) });
+  items.push({ label: '✅ 누가 읽었나', fn: () => whoRead(m) });
   if (!mine) items.push({ label: '👤 ' + (m.senderName || '친구') + '님 글 모아보기', fn: () => personView(m.senderId, m.senderName || '친구') });
   if (mine && m.type !== 'image') items.push({ label: '✏️ 수정', fn: () => editMsg(m) });
   if (mine) items.push({ label: '🗑️ 삭제', danger: true, fn: () => deleteMsg(m) });
   sheet('메시지', items);
+}
+function whoRead(m) {
+  const r = S.room, rs = r.readSeq || {}, js = r.joinSeq || {}, nm = r.memberNames || {};
+  const targets = (r.members || []).filter(u => u !== m.senderId && (js[u] || 0) < m.seq);
+  const name = u => (nm[u] || userName(u)) + (u === S.uid ? ' (나)' : '');
+  const read = targets.filter(u => (rs[u] || 0) >= m.seq).map(name);
+  const unread = targets.filter(u => (rs[u] || 0) < m.seq).map(name);
+  const chips = list => list.length ? list.map(n => '<span class="wrChip">' + esc(n) + '</span>').join('') : '<span class="wrNone">없음</span>';
+  openModal('누가 읽었나',
+    '<div class="wrHead">' + esc(m.senderName || '친구') + ' · ' + fmtFull(tsMs(m.createdAt)) + '</div>' +
+    '<div class="wrTitle">읽음 (' + read.length + ')</div><div class="wrList">' + chips(read) + '</div>' +
+    '<div class="wrTitle un">안 읽음 (' + unread.length + ')</div><div class="wrList">' + chips(unread) + '</div>');
 }
 function copyText(t) {
   if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했습니다')).catch(() => toast('복사 실패'));
