@@ -872,13 +872,20 @@ $('photoInput').onchange = async e => {
   const bad = picked.length - files.length;
   const over = files.length > MAX_PHOTOS;
   if (over) files = files.slice(0, MAX_PHOTOS);
-  const reads = files.map(f => f.arrayBuffer().then(buf => new Blob([buf], { type: f.type })));
-  e.target.value = '';
-  if (!S.room) return;
-  if (!files.length) { if (bad > 0) toast('사진만 올릴 수 있습니다.\n영상은 링크로 공유해 주세요'); return; }
+  const input = e.target;
+  if (!S.room) { input.value = ''; return; }
+  if (!files.length) { input.value = ''; if (bad > 0) toast('사진만 올릴 수 있습니다.\n영상은 링크로 공유해 주세요'); return; }
   const total = files.length;
   toast((over ? '한 번에 ' + MAX_PHOTOS + '장까지 보냅니다.\n' : '') + (total > 1 ? '사진 ' + total + '장 준비 중…' : '사진 준비 중…'));
-  const loaded = await Promise.allSettled(reads);
+  const loaded = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    try {
+      const blob = await retry(() => f.arrayBuffer().then(buf => new Blob([buf], { type: f.type })), 1, 400);
+      loaded.push({ status: 'fulfilled', value: blob });
+    } catch (err) { loaded.push({ status: 'rejected', reason: err }); }
+  }
+  input.value = '';
   const rid = S.room && S.room.id;
   let ok = 0, lastWhy = '';
   for (let i = 0; i < loaded.length; i++) {
@@ -1421,6 +1428,12 @@ async function leaveRoom() {
   const rid = S.room.id, rname = S.room.name;
   toast('나가는 중…');
   try {
+    await leaveRoomCore(rid, rname, true);
+    closeRoom();
+    toast('방에서 나왔습니다');
+  } catch (e) { console.warn(e); toast('나가기 실패. 인터넷을 확인하세요'); }
+}
+async function leaveRoomCore(rid, rname, keepLeft) {
     const roomRef = db.collection('rooms').doc(rid);
     const q = await roomRef.collection('messages').where('senderId', '==', S.uid).get();
     const mine = q.docs.filter(d => d.data().type !== 'system' && !d.data().deleted);
@@ -1439,10 +1452,48 @@ async function leaveRoom() {
       u['memberNames.' + S.uid] = FV.delete(); u['readSeq.' + S.uid] = FV.delete(); u['joinSeq.' + S.uid] = FV.delete();
       t.update(roomRef, u);
     });
-    await db.collection('users').doc(S.uid).collection('leftRooms').doc(rid).set({ roomId: rid, name: rname, leftAt: FV.serverTimestamp(), requestedAt: null });
-    closeRoom();
-    toast('방에서 나왔습니다');
-  } catch (e) { console.warn(e); toast('나가기 실패. 인터넷을 확인하세요'); }
+    if (keepLeft) await db.collection('users').doc(S.uid).collection('leftRooms').doc(rid).set({ roomId: rid, name: rname, leftAt: FV.serverTimestamp(), requestedAt: null });
+}
+
+async function withdraw() {
+  if (!await askConfirm('탈퇴', '탈퇴하면 되돌릴 수 없습니다.\n\n· 모든 방에서 나가고, 내가 쓴 글이 모두 삭제됩니다\n· 내 보물함과 나간 방 기록이 모두 지워집니다\n\n다시 쓰려면 초대코드로 새로 가입해야 합니다.', '탈퇴', true)) return;
+  const user = auth.currentUser;
+  if (!user) return;
+  const uid = user.uid;
+  try {
+    const p = new firebase.auth.GoogleAuthProvider();
+    p.setCustomParameters({ login_hint: user.email || '' });
+    await user.reauthenticateWithPopup(p);
+  } catch (e) {
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') toast('탈퇴를 취소했습니다');
+    else toast('본인 확인 실패: ' + (e.code || e.message || ''), 8000);
+    return;
+  }
+  toast('탈퇴 처리 중… 창을 닫지 마세요', 30000);
+  try {
+    if (S.room) closeRoom();
+    const uref = db.collection('users').doc(uid);
+    const rooms = await db.collection('rooms').where('members', 'array-contains', uid).get();
+    for (const r of rooms.docs) await leaveRoomCore(r.id, r.data().name || '', false);
+    const saved = await uref.collection('saved').get();
+    for (const d of saved.docs) { const im = d.data().imageId; if (im) await releaseSaved(im); }
+    const left = await uref.collection('leftRooms').get();
+    for (const d of left.docs) await db.collection('rooms').doc(d.id).collection('requests').doc(uid).delete().catch(() => {});
+    const folders = await uref.collection('folders').get();
+    for (const part of chunk(saved.docs.concat(left.docs, folders.docs), 400)) {
+      const b = db.batch();
+      part.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+    stopAll();
+    await uref.delete();
+  } catch (e) {
+    console.warn(e);
+    toast('탈퇴 실패: ' + errWhy(e) + '\n인터넷을 확인하고 다시 해 주세요', 10000);
+    return;
+  }
+  try { await user.delete(); } catch (e) { console.warn(e); await auth.signOut().catch(() => {}); }
+  toast('탈퇴했습니다. 그동안 고마웠습니다', 5000);
 }
 
 function subscribeRequests() {
@@ -1792,11 +1843,12 @@ function renderSettings() {
     '<div class="card"><h3>📦 사진 저장 공간 (모두 함께 사용)</h3><div class="bar"><div style="width:' + pct + '%"></div></div><p>' + (bytes / MB).toFixed(1) + 'MB / ' + (PURGE_BYTES / MB) + 'MB</p>' +
     '<p style="margin-top:8px">· 사진은 자동으로 작게 압축됩니다.<br>· ' + (PURGE_BYTES / MB) + 'MB를 넘으면 가장 오래된 사진부터 자동 삭제됩니다. (보물함에 저장한 사진 포함)<br>· 삭제될 차례가 가까운 사진에는 ⏳ 표시가 붙으니 폰에 저장하세요.<br>· 글과 링크는 삭제되지 않습니다.<br>· 영상은 유튜브 등 링크로 공유해 주세요.</p></div>' +
     '<div class="card"><h3>⭐ 보물함 백업</h3><p>폰을 바꾸거나 만일을 대비해 보물함을 파일로 보관하세요. 복원하면 지금 보물함에 더해집니다.</p><div class="row"><button class="btn small" id="stBackup">💾 백업</button><button class="btn small gray" id="stRestore">📁 복원</button></div></div>' +
-    '<div class="card"><h3>ℹ️ 끼톡</h3><p>앱월드 · 문의 fbi1588@hanmail.net</p><button class="btn small gray" id="stLogout" style="margin-top:10px">로그아웃</button></div>';
+    '<div class="card"><h3>ℹ️ 끼톡</h3><p>앱월드 · 문의 fbi1588@hanmail.net</p><div class="row" style="margin-top:10px"><button class="btn small gray" id="stLogout">로그아웃</button><button class="btn small danger" id="stWithdraw">탈퇴</button></div></div>';
   $('stName').onclick = changeName;
   $('stBackup').onclick = backup;
   $('stRestore').onclick = () => $('restoreFile').click();
   $('stLogout').onclick = async () => { if (await askConfirm('로그아웃', '로그아웃할까요?', '로그아웃')) auth.signOut(); };
+  $('stWithdraw').onclick = withdraw;
 }
 async function changeName() {
   const v = await askText('닉네임 변경 (10자 이내)', myName(), { max: 10 });
