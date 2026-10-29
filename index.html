@@ -54,6 +54,10 @@ input,textarea{font-family:inherit;font-size:15px}
 .joinBox{background:#fff;color:var(--txt);border-radius:20px;padding:24px;width:100%;max-width:360px;text-align:left;margin-top:24px}
 .joinBox label{display:block;font-size:13px;font-weight:700;color:var(--cd);margin:12px 0 6px}
 .joinBox .hint{font-size:12px;color:var(--sub);margin-top:10px}
+.agreeRow{display:flex!important;gap:8px;align-items:flex-start;font-size:13px!important;font-weight:500!important;color:var(--txt)!important;margin:16px 0 4px!important;line-height:1.5}
+.agreeRow input{width:20px;height:20px;flex:none;accent-color:var(--c);margin-top:1px}
+.agreeRow a,.legal a{color:var(--c);font-weight:700}
+.legal{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px}
 
 .topbar{background:var(--c);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(122,10,33,.25);z-index:2}
 .topbar h1{font-size:20px;font-weight:800}
@@ -282,6 +286,7 @@ mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
     <input id="joinName" class="inp" maxlength="10" placeholder="친구들에게 보일 이름">
     <label>초대코드</label>
     <input id="joinCode" class="inp" maxlength="30" placeholder="받은 초대코드 입력">
+    <label class="agreeRow"><input type="checkbox" id="joinAgree"> <span><a href="terms.html" target="_blank">이용약관</a>과 <a href="privacy.html" target="_blank">개인정보처리방침</a>에 동의합니다 (필수)</span></label>
     <button class="btn wide" id="joinBtn">가입하기</button>
     <div class="hint">초대코드는 끼톡을 알려준 친구에게 받으세요.</div>
     <button class="btn gray wide" id="joinLogoutBtn">다른 계정으로 로그인</button>
@@ -491,6 +496,7 @@ auth.onAuthStateChanged(async user => {
     if (!d.exists) { $('joinName').value = (user.displayName || '').slice(0, 10); show('joinScreen'); return; }
     S.me = d.data();
     startApp();
+    if (!S.me.agreedAt) askAgree();
   } catch (e) {
     $('joinName').value = (user.displayName || '').slice(0, 10);
     show('joinScreen');
@@ -511,20 +517,69 @@ $('joinBtn').onclick = async () => {
   const name = $('joinName').value.trim(), code = $('joinCode').value.trim();
   if (!name) return toast('닉네임을 입력하세요');
   if (!code || code.indexOf('/') >= 0) return toast('초대코드를 입력하세요');
+  if (!$('joinAgree').checked) return toast('이용약관과 개인정보처리방침에 동의해 주세요');
   $('joinBtn').disabled = true;
   try {
-    await db.collection('users').doc(S.uid).set({ name, inviteCode: code, createdAt: FV.serverTimestamp() });
-    S.me = { name };
+    await db.collection('users').doc(S.uid).set({ name, inviteCode: code, createdAt: FV.serverTimestamp(), agreedAt: FV.serverTimestamp() });
+    S.me = { name, agreedAt: true };
     startApp();
   } catch (e) { toast('초대코드가 맞지 않습니다'); }
   $('joinBtn').disabled = false;
 };
 
+function askAgree() {
+  let done = false;
+  const el = openModal('약관 동의', '<p style="font-size:14.5px;line-height:1.6">끼톡을 계속 쓰려면 아래 내용에 동의해 주세요.</p><div class="legal"><a href="terms.html" target="_blank">📄 이용약관 보기</a><a href="privacy.html" target="_blank">🔒 개인정보처리방침 보기</a></div><div class="row end"><button class="btn gray aNo">동의 안 함</button><button class="btn aOk">동의합니다</button></div>', {
+    onClose: () => { if (!done) { toast('동의하지 않으면 끼톡을 쓸 수 없습니다'); auth.signOut(); } }
+  });
+  el.querySelector('.aOk').onclick = async () => {
+    try {
+      await db.collection('users').doc(S.uid).update({ agreedAt: FV.serverTimestamp() });
+      done = true; closeModal(); toast('동의했습니다');
+    } catch (e) { toast('저장 실패. 인터넷을 확인하세요'); }
+  };
+  el.querySelector('.aNo').onclick = () => closeModal();
+}
+
+function isBlocked(uid) { return !!(S.blocks && S.blocks[uid]); }
+async function blockUser(uid, name) {
+  if (!uid || uid === S.uid) return;
+  if (!await askConfirm('차단', name + '님을 차단할까요?\n\n· ' + name + '님의 글이 내 화면에서 가려집니다\n· 상대에게는 알리지 않습니다\n· 설정에서 언제든 풀 수 있습니다', '차단', true)) return;
+  try {
+    await db.collection('users').doc(S.uid).collection('blocks').doc(uid).set({ name: name || '', at: FV.serverTimestamp() });
+    toast('🚫 ' + name + '님을 차단했습니다');
+  } catch (e) { toast('차단 실패. 인터넷을 확인하세요'); }
+}
+async function unblockUser(uid, name) {
+  if (!await askConfirm('차단 풀기', name + '님 차단을 풀까요?', '차단 풀기')) return;
+  try { await db.collection('users').doc(S.uid).collection('blocks').doc(uid).delete(); toast('차단을 풀었습니다'); }
+  catch (e) { toast('실패. 인터넷을 확인하세요'); }
+}
+const REPORT_REASONS = ['욕설 · 괴롭힘', '음란물 · 성적인 내용', '폭력 · 위협', '스팸 · 광고', '사기 · 거짓 정보', '기타 불쾌한 내용'];
+function reportMsg(m) {
+  const who = m.senderName || '친구';
+  sheet('🚨 신고 이유를 고르세요', REPORT_REASONS.map(r => ({ label: r, fn: async () => {
+    if (!await askConfirm('신고', who + '님의 글을 "' + r + '"(으)로 신고할까요?\n\n신고는 운영자에게만 전달되고, 상대에게는 알리지 않습니다.', '신고', true)) return;
+    try {
+      await db.collection('reports').add({
+        reporterId: S.uid, reporterName: myName(), targetId: m.senderId || '', targetName: who, reason: r,
+        roomId: (S.room && S.room.id) || '', msgId: m.id || '', msgType: m.type || 'text',
+        text: String(m.text || '').slice(0, 1000), imageId: m.imageId || null, status: 'new', createdAt: FV.serverTimestamp()
+      });
+      toast('신고했습니다. 운영자가 확인합니다');
+      if (!isBlocked(m.senderId) && await askConfirm('차단', who + '님도 차단할까요?', '차단', true)) {
+        await db.collection('users').doc(S.uid).collection('blocks').doc(m.senderId).set({ name: who, at: FV.serverTimestamp() });
+        toast('🚫 ' + who + '님을 차단했습니다');
+      }
+    } catch (e) { console.warn(e); toast('신고 실패. 인터넷을 확인하세요'); }
+  } })));
+}
+
 function stopAll() {
   S.unsubs.forEach(u => u());
   S.unsubs = [];
   stopRoomListeners();
-  S.room = null; S.rooms = []; S.users = {}; S.folders = []; S.saved = []; S.left = []; S.stats = {};
+  S.room = null; S.rooms = []; S.users = {}; S.folders = []; S.saved = []; S.left = []; S.stats = {}; S.blocks = {};
   S.imgCache = {};
 }
 function listen(q, fn) { S.unsubs.push(q.onSnapshot(fn, e => console.warn(e))); }
@@ -564,6 +619,12 @@ function startApp() {
     S.left = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
     cleanLeft();
     if (S.tab === 'left') renderLeft();
+  });
+  listen(uref.collection('blocks'), snap => {
+    S.blocks = {};
+    snap.forEach(d => S.blocks[d.id] = d.data());
+    if (S.room) renderMsgs();
+    if (S.tab === 'settings') renderSettings();
   });
   listen(db.collection('stats').doc('usage'), d => {
     S.stats = d.exists ? d.data() : {};
@@ -757,6 +818,7 @@ document.addEventListener('click', e => {
 
 function bubbleHTML(m) {
   if (m.deleted) return '<div class="bubble del" data-id="' + m.id + '">삭제된 메시지입니다</div>';
+  if (m.senderId !== S.uid && isBlocked(m.senderId)) return '<div class="bubble del" data-id="' + m.id + '">🚫 차단한 사람의 메시지입니다</div>';
   let inner;
   if (m.type === 'image') {
     const cached = m.imageId && Object.prototype.hasOwnProperty.call(S.imgCache, m.imageId);
@@ -1083,6 +1145,7 @@ function msgMenu(m) {
   const mine = m.senderId === S.uid;
   const items = [];
   if (m.deleted) return;
+  if (!mine && isBlocked(m.senderId)) { sheet('차단한 사람', [{ label: '🔓 ' + (m.senderName || '친구') + '님 차단 풀기', fn: () => unblockUser(m.senderId, m.senderName || '친구') }]); return; }
   if (m.type === 'image') items.push({ label: '🔍 크게 보기', fn: async () => { const im = await getImage(m.imageId); if (im) viewImage(im.data); else toast('삭제된 사진입니다'); } });
   if (m.type === 'image') items.push({ label: '📥 폰에 저장', fn: async () => { const im = await getImage(m.imageId); if (im) downloadData(im.data, 'kkiritalk_' + Date.now() + '.jpg'); else toast('삭제된 사진입니다'); } });
   if (m.text) items.push({ label: '📋 복사', fn: () => copyText(m.text) });
@@ -1091,6 +1154,8 @@ function msgMenu(m) {
   if (!mine) items.push({ label: '👤 ' + (m.senderName || '친구') + '님 글 모아보기', fn: () => personView(m.senderId, m.senderName || '친구') });
   if (mine && m.type !== 'image') items.push({ label: '✏️ 수정', fn: () => editMsg(m) });
   if (mine) items.push({ label: '🗑️ 삭제', danger: true, fn: () => deleteMsg(m) });
+  if (!mine) items.push({ label: '🚨 신고', danger: true, fn: () => reportMsg(m) });
+  if (!mine && !isBlocked(m.senderId)) items.push({ label: '🚫 ' + (m.senderName || '친구') + '님 차단', danger: true, fn: () => blockUser(m.senderId, m.senderName || '친구') });
   sheet('메시지', items);
 }
 function whoRead(m) {
@@ -1480,7 +1545,8 @@ async function withdraw() {
     const left = await uref.collection('leftRooms').get();
     for (const d of left.docs) await db.collection('rooms').doc(d.id).collection('requests').doc(uid).delete().catch(() => {});
     const folders = await uref.collection('folders').get();
-    for (const part of chunk(saved.docs.concat(left.docs, folders.docs), 400)) {
+    const blocks = await uref.collection('blocks').get();
+    for (const part of chunk(saved.docs.concat(left.docs, folders.docs, blocks.docs), 400)) {
       const b = db.batch();
       part.forEach(d => b.delete(d.ref));
       await b.commit();
@@ -1559,8 +1625,14 @@ function renderLeft() {
 
 async function personView(uid, name) {
   if (!S.room) return;
+  if (uid !== S.uid && isBlocked(uid)) { sheet(name + '님 (차단함)', [{ label: '🔓 ' + name + '님 차단 풀기', fn: () => unblockUser(uid, name) }]); return; }
   const rid = S.room.id;
-  const el = openModal(name + '님이 올린 글', '<div class="segs"><button data-f="all" class="on">전체</button><button data-f="text">글</button><button data-f="image">사진</button><button data-f="link">링크</button></div><div class="pvList"><div class="empty">불러오는 중…</div></div><button class="btn wide gray hidden pvMore">더 보기</button>', { full: true });
+  const el = openModal(name + '님이 올린 글', '<div class="segs"><button data-f="all" class="on">전체</button><button data-f="text">글</button><button data-f="image">사진</button><button data-f="link">링크</button></div><div class="pvList"><div class="empty">불러오는 중…</div></div><button class="btn wide gray hidden pvMore">더 보기</button>' +
+    (uid !== S.uid ? '<div class="row"><button class="btn small danger pvReport">🚨 ' + esc(name) + '님 신고</button><button class="btn small danger pvBlock">🚫 차단</button></div>' : ''), { full: true });
+  if (uid !== S.uid) {
+    el.querySelector('.pvReport').onclick = () => { closeModal(); later(() => reportMsg({ senderId: uid, senderName: name, id: '', type: 'user', text: '' })); };
+    el.querySelector('.pvBlock').onclick = () => { closeModal(); later(() => blockUser(uid, name)); };
+  }
   let items = [], last = null, filter = 'all';
   const listEl = el.querySelector('.pvList'), moreEl = el.querySelector('.pvMore');
   const draw = () => {
@@ -1843,7 +1915,11 @@ function renderSettings() {
     '<div class="card"><h3>📦 사진 저장 공간 (모두 함께 사용)</h3><div class="bar"><div style="width:' + pct + '%"></div></div><p>' + (bytes / MB).toFixed(1) + 'MB / ' + (PURGE_BYTES / MB) + 'MB</p>' +
     '<p style="margin-top:8px">· 사진은 자동으로 작게 압축됩니다.<br>· ' + (PURGE_BYTES / MB) + 'MB를 넘으면 가장 오래된 사진부터 자동 삭제됩니다. (보물함에 저장한 사진 포함)<br>· 삭제될 차례가 가까운 사진에는 ⏳ 표시가 붙으니 폰에 저장하세요.<br>· 글과 링크는 삭제되지 않습니다.<br>· 영상은 유튜브 등 링크로 공유해 주세요.</p></div>' +
     '<div class="card"><h3>⭐ 보물함 백업</h3><p>폰을 바꾸거나 만일을 대비해 보물함을 파일로 보관하세요. 복원하면 지금 보물함에 더해집니다.</p><div class="row"><button class="btn small" id="stBackup">💾 백업</button><button class="btn small gray" id="stRestore">📁 복원</button></div></div>' +
-    '<div class="card"><h3>ℹ️ 끼톡</h3><p>앱월드 · 문의 fbi1588@hanmail.net</p><div class="row" style="margin-top:10px"><button class="btn small gray" id="stLogout">로그아웃</button><button class="btn small danger" id="stWithdraw">탈퇴</button></div></div>';
+    '<div class="card"><h3>🚫 차단한 사람</h3>' + (Object.keys(S.blocks || {}).length
+      ? Object.keys(S.blocks).map(u => '<div class="row" style="margin-top:8px;justify-content:space-between"><span style="font-size:14px">' + esc(S.blocks[u].name || userName(u)) + '</span><button class="btn small gray" data-unblock="' + esc(u) + '">차단 풀기</button></div>').join('')
+      : '<p>차단한 사람이 없습니다.<br>말풍선 ⋯ 메뉴나 이름을 눌러 차단할 수 있습니다.</p>') + '</div>' +
+    '<div class="card"><h3>ℹ️ 끼톡</h3><p>앱월드 · 문의 fbi1588@hanmail.net</p><div class="legal"><a href="terms.html" target="_blank">이용약관</a><a href="privacy.html" target="_blank">개인정보처리방침</a></div><div class="row" style="margin-top:10px"><button class="btn small gray" id="stLogout">로그아웃</button><button class="btn small danger" id="stWithdraw">탈퇴</button></div></div>';
+  box.querySelectorAll('[data-unblock]').forEach(b => b.onclick = () => { const u = b.dataset.unblock; unblockUser(u, (S.blocks[u] && S.blocks[u].name) || userName(u)); });
   $('stName').onclick = changeName;
   $('stBackup').onclick = backup;
   $('stRestore').onclick = () => $('restoreFile').click();
