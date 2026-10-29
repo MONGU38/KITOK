@@ -336,7 +336,7 @@ mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
     <button class="icon" id="photoBtn" title="사진">📷</button>
     <textarea id="msgInput" rows="1" placeholder="메시지 입력"></textarea>
     <button class="send" id="sendBtn">전송</button>
-    <input type="file" id="photoInput" accept="image/*" hidden>
+    <input type="file" id="photoInput" accept="image/*" multiple hidden>
   </footer>
 </div>
 
@@ -401,7 +401,7 @@ const S = {
 
 const $ = id => document.getElementById(id);
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2400); }
+function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), ms || 2400); }
 function tsMs(v) { if (!v) return Date.now(); if (typeof v === 'number') return v; if (v.toMillis) return v.toMillis(); if (v.seconds != null) return v.seconds * 1000; return Date.now(); }
 function fmtTime(ms) { const d = new Date(ms); let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, '0'); const ap = h < 12 ? '오전' : '오후'; h = h % 12 || 12; return ap + ' ' + h + ':' + m; }
 function fmtDate(ms) { const d = new Date(ms); return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + '일월화수목금토'[d.getDay()] + '요일'; }
@@ -865,52 +865,128 @@ async function onSend() {
 }
 
 $('photoBtn').onclick = () => $('photoInput').click();
+const MAX_PHOTOS = 10;
 $('photoInput').onchange = async e => {
-  const f = e.target.files[0];
+  const picked = Array.from(e.target.files || []);
+  let files = picked.filter(f => f.type && f.type.indexOf('image/') === 0);
+  const bad = picked.length - files.length;
+  const over = files.length > MAX_PHOTOS;
+  if (over) files = files.slice(0, MAX_PHOTOS);
+  const reads = files.map(f => f.arrayBuffer().then(buf => new Blob([buf], { type: f.type })));
   e.target.value = '';
-  if (!f || !S.room) return;
-  if (!f.type || f.type.indexOf('image/') !== 0) return toast('사진만 올릴 수 있습니다.\n영상은 링크로 공유해 주세요');
-  toast('사진 압축 중…');
+  if (!S.room) return;
+  if (!files.length) { if (bad > 0) toast('사진만 올릴 수 있습니다.\n영상은 링크로 공유해 주세요'); return; }
+  const total = files.length;
+  toast((over ? '한 번에 ' + MAX_PHOTOS + '장까지 보냅니다.\n' : '') + (total > 1 ? '사진 ' + total + '장 준비 중…' : '사진 준비 중…'));
+  const loaded = await Promise.allSettled(reads);
+  const rid = S.room && S.room.id;
+  let ok = 0, lastWhy = '';
+  for (let i = 0; i < loaded.length; i++) {
+    if (!S.room || S.room.id !== rid) break;
+    if (loaded[i].status !== 'fulfilled') { lastWhy = '읽기 실패: ' + errWhy(loaded[i].reason); continue; }
+    toast(total > 1 ? '사진 보내는 중… (' + (i + 1) + '/' + total + ')' : '사진 보내는 중…');
+    const r = await sendPhoto(loaded[i].value);
+    loaded[i] = null;
+    if (r.ok) ok++; else lastWhy = r.why;
+    if (i < loaded.length - 1) await sleep(1000);
+  }
+  if (ok) checkStorage();
+  if (ok < total) toast((total - ok) + '장 전송 실패\n' + (lastWhy || ''), 15000);
+  else if (total > 1) toast(ok + '장을 보냈습니다');
+  else toast('사진을 보냈습니다');
+};
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+async function retry(fn, times, waitMs) {
+  let last;
+  for (let i = 0; i <= times; i++) {
+    try { return await fn(); } catch (e) { last = e; if (i < times) await sleep(waitMs * (i + 1)); }
+  }
+  throw last;
+}
+function errWhy(e) {
+  const parts = [];
+  if (e && e.code) parts.push(e.code);
+  if (e && e.name && e.name !== 'Error') parts.push(e.name);
+  if (e && e.message) parts.push(e.message);
+  const c = parts.join(' / ') || String(e || 'unknown');
+  if (/memory|image|decode|EncodingError|InvalidState/i.test(c)) return '사진을 읽지 못함 (' + c + ')';
+  if (/permission/i.test(c)) return '권한 없음 (' + c + ')';
+  if (/unavailable|network|deadline|offline/i.test(c)) return '인터넷 연결 문제 (' + c + ')';
+  if (/aborted|failed-precondition/i.test(c)) return '동시에 보내기 충돌 (' + c + ')';
+  return c;
+}
+async function sendPhoto(f) {
+  let stage = '압축';
   try {
     const data = await compress(f);
+    stage = '업로드';
     const bytes = data.length;
     const imgRef = db.collection('images').doc();
-    const batch = db.batch();
-    batch.set(imgRef, { data, bytes, ownerId: S.uid, createdAt: FV.serverTimestamp() });
-    batch.set(db.collection('imageMeta').doc(imgRef.id), { bytes, ownerId: S.uid, createdAt: FV.serverTimestamp(), savedCount: 0, msgDeleted: false });
-    batch.set(db.collection('stats').doc('usage'), { bytes: FV.increment(bytes) }, { merge: true });
-    await batch.commit();
+    await retry(() => {
+      const batch = db.batch();
+      batch.set(imgRef, { data, bytes, ownerId: S.uid, createdAt: FV.serverTimestamp() });
+      batch.set(db.collection('imageMeta').doc(imgRef.id), { bytes, ownerId: S.uid, createdAt: FV.serverTimestamp(), savedCount: 0, msgDeleted: false });
+      batch.set(db.collection('stats').doc('usage'), { bytes: FV.increment(bytes) }, { merge: true });
+      return batch.commit();
+    }, 1, 800);
     S.imgCache[imgRef.id] = { data, bytes, createdAt: TS.now() };
     if (S.mode !== 'live') backToLive();
     S.sentNow = true;
-    await sendTo(S.room.id, { type: 'image', imageId: imgRef.id, text: '' }, '사진');
-    checkStorage();
-  } catch (err) { console.warn(err); toast('사진 전송 실패'); }
-};
-function compress(file) {
-  return new Promise((res, rej) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let max = 1280, q = 0.72, out = '';
-      for (let i = 0; i < 6; i++) {
-        const sc = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(img.width * sc));
-        c.height = Math.max(1, Math.round(img.height * sc));
-        const x = c.getContext('2d');
-        x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
-        x.drawImage(img, 0, 0, c.width, c.height);
-        out = c.toDataURL('image/jpeg', q);
-        if (out.length <= 220 * 1024) break;
-        max = Math.round(max * 0.8); q = Math.max(0.45, q - 0.08);
-      }
-      res(out);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); };
-    img.src = url;
-  });
+    stage = '전송';
+    await retry(() => sendTo(S.room.id, { type: 'image', imageId: imgRef.id, text: '' }, '사진'), 2, 700);
+    return { ok: true };
+  } catch (err) { console.warn(err); return { ok: false, why: stage + ' 실패: ' + errWhy(err) }; }
+}
+const PHOTO_MAX = 1280;
+let compressCanvas = null;
+async function decodeBitmap(file) {
+  if (!window.createImageBitmap) throw new Error('비트맵 없음');
+  const bmp = await createImageBitmap(file, { resizeWidth: PHOTO_MAX, resizeQuality: 'medium', imageOrientation: 'from-image' });
+  return { src: bmp, w: bmp.width, h: bmp.height, done: () => { try { bmp.close(); } catch (e) {} } };
+}
+async function decodeImg(file) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.decoding = 'async';
+  try {
+    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('그림 열기 실패')); img.src = url; });
+    if (!img.naturalWidth) throw new Error('그림 크기 0');
+  } catch (e) { URL.revokeObjectURL(url); img.src = ''; throw e; }
+  return { src: img, w: img.naturalWidth, h: img.naturalHeight, done: () => { URL.revokeObjectURL(url); img.src = ''; } };
+}
+async function decodeScaled(file) {
+  const errs = [];
+  const tries = [['방법1', decodeBitmap], ['방법2', decodeImg], ['쉰 뒤 방법1', decodeBitmap], ['쉰 뒤 방법2', decodeImg]];
+  for (let i = 0; i < tries.length; i++) {
+    if (i === 2) await sleep(1500);
+    try { return await tries[i][1](file); }
+    catch (e) { errs.push(tries[i][0] + ': ' + ((e && (e.name && e.name !== 'Error' ? e.name + ' ' : '') + (e && e.message || '')) || e)); }
+  }
+  throw new Error('사진 열기 실패 [' + (file.size ? Math.round(file.size / 1024) + 'KB ' : '') + (file.type || '') + '] ' + errs.join(' | '));
+}
+async function compress(file) {
+  const d = await decodeScaled(file);
+  try {
+    if (!compressCanvas) compressCanvas = document.createElement('canvas');
+    const c = compressCanvas;
+    let max = PHOTO_MAX, q = 0.72, out = '';
+    for (let i = 0; i < 6; i++) {
+      const sc = Math.min(1, max / Math.max(d.w, d.h));
+      c.width = Math.max(1, Math.round(d.w * sc));
+      c.height = Math.max(1, Math.round(d.h * sc));
+      const x = c.getContext('2d');
+      x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(d.src, 0, 0, c.width, c.height);
+      out = c.toDataURL('image/jpeg', q);
+      if (out.length <= 220 * 1024) break;
+      max = Math.round(max * 0.8); q = Math.max(0.45, q - 0.08);
+    }
+    if (!out || out.length < 100) throw new Error('사진 줄이기 실패 (' + d.w + 'x' + d.h + ')');
+    return out;
+  } finally {
+    d.done();
+    if (compressCanvas) { compressCanvas.width = 1; compressCanvas.height = 1; }
+  }
 }
 
 async function purgeOne(metaDoc) {
