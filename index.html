@@ -58,26 +58,19 @@ input,textarea{font-family:inherit;font-size:15px}
 .agreeRow input{width:20px;height:20px;flex:none;accent-color:var(--c);margin-top:1px}
 .agreeRow a,.legal a{color:var(--c);font-weight:700}
 .legal{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px}
-.gBar{display:flex;gap:8px;overflow-x:auto;padding:10px 14px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.gBar::-webkit-scrollbar{display:none}
-.gChip{flex:none;padding:7px 14px;border-radius:18px;background:#fff;border:1.5px solid var(--line);color:var(--txt);font-size:14px;font-weight:600;white-space:nowrap}
-.gChip.on{background:var(--c);border-color:var(--c);color:#fff}
-.gChip.add{color:var(--c);border-style:dashed;border-color:var(--c)}
-.gSec{padding:4px 0 16px}
-.gSec+.gSec{border-top:1px solid var(--line);padding-top:14px}
-.gSec h4{font-size:15px;color:var(--cdd);margin-bottom:8px}
-.gSec .inp{margin-bottom:8px}
-.gSec .hint{font-size:12px;color:var(--sub);margin:-2px 0 8px}
-.pickHead{font-size:13px;font-weight:700;color:var(--cd);padding:10px 2px 4px}
-.pickHead:first-child{padding-top:2px}
+.topActions .taTxt{width:auto;font-size:14px;font-weight:700;padding:0 10px;height:34px;border:1.5px solid rgba(255,255,255,.7);border-radius:17px;margin-left:6px}
+.fMe{display:flex;align-items:center;gap:10px;background:var(--cll);border:1px solid var(--line);border-radius:14px;padding:12px}
+.fMe span{font-size:13px;color:var(--sub)}
+.fMe b{font-size:22px;letter-spacing:3px;color:var(--c);flex:1}
+.fAdd{display:flex;gap:8px;margin:12px 0 6px}
+.fAdd .inp{flex:1}
+.fTitle{font-size:13px;font-weight:700;color:var(--cd);margin:14px 2px 6px}
+.fRow{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;border-bottom:1px solid var(--line);font-size:15px}
 .gDone{text-align:center;padding:6px 0 4px}
 .gDoneName{font-size:17px;font-weight:700;color:var(--txt)}
 .gDoneLabel{font-size:13px;color:var(--sub);margin-top:10px}
 .gDoneCode{font-size:40px;font-weight:800;letter-spacing:10px;color:var(--c);margin:2px 0 6px}
 .gNote{font-size:13.5px;color:var(--sub);line-height:1.6;margin:8px 0 14px}
-.gRow{padding:10px 0;border-bottom:1px solid var(--line)}
-.gRow:last-of-type{border-bottom:none}
-.gRow b{font-size:15px}
 
 .topbar{background:var(--c);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(122,10,33,.25);z-index:2}
 .topbar h1{font-size:20px;font-weight:800}
@@ -304,11 +297,9 @@ mark.hit{background:var(--gold);color:#2A1A1E;border-radius:3px;padding:0 1px}
   <div class="joinBox">
     <label>닉네임 (10자 이내)</label>
     <input id="joinName" class="inp" maxlength="10" placeholder="친구들에게 보일 이름">
-    <label>초대코드 (받았으면 입력, 없으면 비워 두세요)</label>
-    <input id="joinCode" class="inp" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="숫자 4개">
     <label class="agreeRow"><input type="checkbox" id="joinAgree"> <span><a href="terms.html" target="_blank">이용약관</a>과 <a href="privacy.html" target="_blank">개인정보처리방침</a>에 동의합니다 (필수)</span></label>
     <button class="btn wide" id="joinBtn">가입하기</button>
-    <div class="hint">초대코드가 없으면 가입한 뒤 [＋ 모임]에서 내 모임을 직접 만들 수 있습니다.</div>
+    <div class="hint">가입하면 나만의 친구코드(숫자 4개)가 생깁니다.<br>친구와 코드를 주고받아 친구로 추가하세요.</div>
     <button class="btn gray wide" id="joinLogoutBtn">다른 계정으로 로그인</button>
   </div>
 </div>
@@ -534,22 +525,15 @@ $('loginBtn').onclick = async () => {
 };
 $('joinLogoutBtn').onclick = () => auth.signOut();
 $('joinBtn').onclick = async () => {
-  const name = $('joinName').value.trim(), code = normCode($('joinCode').value);
+  const name = $('joinName').value.trim();
   if (!name) return toast('닉네임을 입력하세요');
-  if (code && !CODE_RE.test(code)) return toast('초대코드를 다시 확인해 주세요');
   if (!$('joinAgree').checked) return toast('이용약관과 개인정보처리방침에 동의해 주세요');
   $('joinBtn').disabled = true;
   try {
-    if (code) {
-      const g = await db.collection('invites').doc(code).get();
-      if (!g.exists) { toast('없는 초대코드입니다.\n비워 두고 가입한 뒤 모임을 만들 수도 있습니다', 5000); $('joinBtn').disabled = false; return; }
-    }
-    await db.collection('users').doc(S.uid).set({ name, groups: [], createdAt: FV.serverTimestamp(), agreedAt: FV.serverTimestamp() });
-    S.me = { name, groups: [], agreedAt: true };
-    if (code) await joinGroupCore(code);
-    S.group = code || '';
+    await db.collection('users').doc(S.uid).set({ name, createdAt: FV.serverTimestamp(), agreedAt: FV.serverTimestamp() });
+    S.me = { name, agreedAt: true };
+    S.welcome = true;
     startApp();
-    if (!code) later(() => groupModal());
   } catch (e) { console.warn(e); toast('가입 실패: ' + errWhy(e)); }
   $('joinBtn').disabled = false;
 };
@@ -606,8 +590,7 @@ function stopAll() {
   S.unsubs.forEach(u => u());
   S.unsubs = [];
   stopRoomListeners();
-  Object.keys(S.gSubs || {}).forEach(c => S.gSubs[c].forEach(u => u()));
-  S.gSubs = {}; S.groups = {}; S.gm = {};
+  S.friends = {}; S.codeBusy = false; S.migrated = false; S.friendsLoaded = false; S.roomsLoaded = false;
   S.room = null; S.rooms = []; S.users = {}; S.folders = []; S.saved = []; S.left = []; S.stats = {}; S.blocks = {};
   S.imgCache = {};
 }
@@ -623,18 +606,22 @@ function startApp() {
   listen(uref, d => {
     if (!d.exists) return;
     S.me = d.data();
-    if (!S.me.groups && S.me.inviteCode) {
-      const c = S.me.inviteCode;
-      S.me.groups = [c];
-      uref.update({ groups: [c] }).catch(e => console.warn(e));
-      db.collection('invites').doc(c).collection('members').doc(S.uid).set({ name: S.me.name || '', joinedAt: FV.serverTimestamp() }).catch(e => console.warn(e));
-    }
-    syncGroups();
+    ensureFriendCode();
     if (S.tab === 'settings') renderSettings();
+  });
+  listen(uref.collection('friends'), snap => {
+    S.friends = {};
+    snap.forEach(d => S.friends[d.id] = d.data());
+    S.users = S.friends;
+    S.friendsLoaded = true;
+    if (S.tab === 'settings') renderSettings();
+    migrateFriends();
   });
   listen(db.collection('rooms').where('members', 'array-contains', S.uid), snap => {
     S.rooms = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).sort((a, b) => tsMs(b.lastAt) - tsMs(a.lastAt));
     renderRooms();
+    S.roomsLoaded = true;
+    migrateFriends();
     cleanLeft();
     if (S.room) {
       const r = S.rooms.find(x => x.id === S.room.id);
@@ -675,7 +662,7 @@ function switchTab(t) {
   $('tabTitle').textContent = TAB_TITLES[t];
   const ta = $('topActions');
   ta.innerHTML = '';
-  if (t === 'chats') { ta.innerHTML = '<button id="newRoomBtn" title="새 대화방">＋</button>'; $('newRoomBtn').onclick = newRoomModal; renderRooms(); }
+  if (t === 'chats') { ta.innerHTML = '<button class="taTxt" id="friendBtn">👥 친구</button><button class="taTxt" id="newRoomBtn">＋ 방</button>'; $('friendBtn').onclick = friendsModal; $('newRoomBtn').onclick = newRoomModal; renderRooms(); }
   if (t === 'treasure') { ta.innerHTML = '<button id="newFolderBtn" title="새 폴더">＋</button>'; $('newFolderBtn').onclick = () => createFolder(null); renderTreasure(); }
   if (t === 'left') renderLeft();
   if (t === 'settings') renderSettings();
@@ -694,156 +681,129 @@ function updateBadges() {
 
 function renderRooms() {
   const el = $('roomList');
-  const bar = groupBarHTML();
-  const list = S.group ? S.rooms.filter(r => roomGroup(r) === S.group) : S.rooms;
-  const bindBar = () => {
-    el.querySelectorAll('.gChip[data-g]').forEach(b => b.onclick = () => { S.group = b.dataset.g; renderRooms(); });
-    el.querySelector('#gAdd').onclick = groupModal;
-  };
-  if (!myGroups().length && !S.rooms.length) { el.innerHTML = bar + '<div class="empty">아직 들어간 모임이 없습니다.<br>[＋ 모임]을 눌러 초대코드로 들어가거나<br>내 모임을 새로 만드세요.</div>'; bindBar(); return; }
-  if (!list.length) { el.innerHTML = bar + '<div class="empty">아직 대화방이 없습니다.<br>오른쪽 위 ＋ 버튼으로 방을 만드세요.</div>'; bindBar(); return; }
-  el.innerHTML = bar + list.map(r => {
+  const list = S.rooms;
+  if (!list.length) { el.innerHTML = '<div class="empty">아직 대화방이 없습니다.<br>위의 👥 친구에서 친구를 추가하고<br>＋ 방으로 대화방을 만드세요.</div>'; return; }
+  el.innerHTML = list.map(r => {
     const un = unreadOf(r);
     return '<div class="roomItem" data-id="' + r.id + '"><div class="avatar">' + esc((r.name || '?').slice(0, 1)) + '</div>' +
       '<div class="rMid"><div class="rTop"><b>' + esc(r.name) + '</b><span class="cnt">' + (r.members || []).length + '</span></div><div class="rLast">' + esc(r.lastMessage || '') + '</div></div>' +
       '<div class="rRight"><span class="rTime">' + (r.lastAt ? fmtShort(tsMs(r.lastAt)) : '') + '</span>' + (un > 0 ? '<span class="badge">' + (un > 99 ? '99+' : un) + '</span>' : '') + '</div></div>';
   }).join('');
   el.querySelectorAll('.roomItem').forEach(x => x.onclick = () => openRoom(x.dataset.id));
-  bindBar();
 }
 
-/* ===== 모임(여러 개 가입 가능) ===== */
-const CODE_RE = /^[0-9]{4}$/;
-function normCode(v) { return String(v || '').replace(/[^0-9]/g, '').slice(0, 4); }
-function myGroups() { return (S.me && S.me.groups) || []; }
-function groupName(c) { return (S.groups[c] && S.groups[c].name) || c; }
-function roomGroup(r) { return (r && r.groupId) || (S.me && S.me.inviteCode) || ''; }
-function syncGroups() {
-  S.gSubs = S.gSubs || {}; S.groups = S.groups || {}; S.gm = S.gm || {};
-  const want = myGroups();
-  Object.keys(S.gSubs).forEach(c => {
-    if (want.indexOf(c) < 0) { S.gSubs[c].forEach(u => u()); delete S.gSubs[c]; delete S.groups[c]; delete S.gm[c]; }
-  });
-  want.forEach(c => {
-    if (S.gSubs[c]) return;
-    const gref = db.collection('invites').doc(c);
-    S.gSubs[c] = [
-      gref.onSnapshot(d => { S.groups[c] = d.exists ? d.data() : {}; groupsChanged(); }, e => console.warn(e)),
-      gref.collection('members').onSnapshot(snap => {
-        const m = {}; snap.forEach(d => m[d.id] = d.data()); S.gm[c] = m; groupsChanged();
-      }, e => console.warn(e))
-    ];
-  });
-  if (S.group && want.indexOf(S.group) < 0) S.group = '';
-  groupsChanged();
-}
-function groupsChanged() {
-  const u = {};
-  Object.keys(S.gm || {}).forEach(c => Object.keys(S.gm[c]).forEach(id => { u[id] = S.gm[c][id]; }));
-  S.users = u;
-  if (S.tab === 'chats') renderRooms();
-  if (S.tab === 'settings') renderSettings();
-}
-async function joinGroupCore(code) {
-  await db.collection('invites').doc(code).collection('members').doc(S.uid).set({ name: myName(), joinedAt: FV.serverTimestamp() });
-  await db.collection('users').doc(S.uid).update({ groups: FV.arrayUnion(code) });
-  S.me = Object.assign({}, S.me, { groups: myGroups().filter(c => c !== code).concat([code]) });
-}
-async function joinGroup(code) {
-  code = normCode(code);
-  if (!CODE_RE.test(code)) return toast('초대코드는 숫자 4개입니다');
-  if (myGroups().indexOf(code) >= 0) return toast('이미 들어가 있는 모임입니다');
+/* ===== 친구 (카톡처럼 친구코드로 추가) ===== */
+const FCODE_LEN = 4; // 친구코드 자릿수 (6으로 바꾸면 6자리)
+const FCODE_RE = new RegExp('^[0-9]{' + FCODE_LEN + '}$');
+function normCode(v) { return String(v || '').replace(/[^0-9]/g, '').slice(0, FCODE_LEN); }
+function myCode() { return (S.me && S.me.friendCode) || ''; }
+function nameOf(id) { return id === S.uid ? myName() : ((S.friends[id] && S.friends[id].name) || (S.room && S.room.memberNames && S.room.memberNames[id]) || '친구'); }
+async function ensureFriendCode() {
+  if (!S.me || S.me.friendCode || S.codeBusy) return;
+  S.codeBusy = true;
   try {
-    const g = await db.collection('invites').doc(code).get();
-    if (!g.exists) return toast('없는 초대코드입니다');
-    await joinGroupCore(code);
-    closeModal();
-    S.group = code; switchTab('chats');
-    toast('「' + ((g.data() && g.data().name) || code) + '」 모임에 들어왔습니다');
-  } catch (e) { console.warn(e); toast('들어가기 실패: ' + errWhy(e)); }
+    for (let i = 0; i < 25; i++) {
+      let c = '';
+      for (let k = 0; k < FCODE_LEN; k++) c += Math.floor(Math.random() * 10);
+      const ref = db.collection('codes').doc(c);
+      const ok = await db.runTransaction(async t => {
+        const d = await t.get(ref);
+        if (d.exists) return false;
+        t.set(ref, { uid: S.uid, name: myName(), createdAt: FV.serverTimestamp() });
+        t.update(db.collection('users').doc(S.uid), { friendCode: c });
+        return true;
+      });
+      if (ok) {
+        S.me = Object.assign({}, S.me, { friendCode: c });
+        if (S.welcome) { S.welcome = false; later(() => welcomeModal()); }
+        if (S.tab === 'settings') renderSettings();
+        return;
+      }
+    }
+    toast('친구코드 만들기 실패. 앱을 다시 열어 주세요');
+  } catch (e) { console.warn(e); }
+  finally { S.codeBusy = false; }
 }
-async function createGroup(name, code) {
-  name = String(name || '').trim(); code = normCode(code);
-  if (!name) return toast('모임 이름을 입력하세요');
-  if (!CODE_RE.test(code)) return toast('초대코드는 숫자 4개로 만들어 주세요');
+async function migrateFriends() {
+  if (S.migrated || !S.friendsLoaded || !S.roomsLoaded) return;
+  S.migrated = true;
+  const add = {};
+  S.rooms.forEach(r => (r.members || []).forEach(id => {
+    if (id !== S.uid && !S.friends[id] && (r.memberNames || {})[id]) add[id] = r.memberNames[id];
+  }));
+  for (const id of Object.keys(add)) {
+    await db.collection('users').doc(S.uid).collection('friends').doc(id).set({ name: add[id], addedAt: FV.serverTimestamp() }).catch(() => {});
+  }
+}
+async function addFriendByCode(raw) {
+  const c = normCode(raw);
+  if (!FCODE_RE.test(c)) return toast('친구코드는 숫자 ' + FCODE_LEN + '개입니다');
+  if (c === myCode()) return toast('내 친구코드입니다');
   try {
-    const ref = db.collection('invites').doc(code);
-    const g = await ref.get();
-    if (g.exists) return toast('이미 다른 모임이 쓰는 번호입니다.\n다른 숫자 4개로 만들어 주세요', 5000);
-    await ref.set({ name, ownerId: S.uid, createdAt: FV.serverTimestamp() });
-    await joinGroupCore(code);
-    closeModal();
-    S.group = code; switchTab('chats');
-    later(() => {
-      const el = openModal('모임을 만들었습니다 🎉',
-        '<div class="gDone"><div class="gDoneName">' + esc(name) + '</div><div class="gDoneLabel">초대코드</div><div class="gDoneCode">' + esc(code) + '</div></div>' +
-        '<p class="gNote">· 이 숫자 4개를 친구에게 알려 주면 이 모임에 들어옵니다.<br>· 아래 버튼을 누르면 주소와 가입 방법까지 한 번에 복사됩니다. 카톡에 붙여 넣어 보내세요.<br>· 초대코드는 설정 → 우리 모임에서 언제든 다시 볼 수 있습니다.</p>' +
-        '<button class="btn wide" id="gDoneCopy">📋 초대 글 복사</button>');
-      el.querySelector('#gDoneCopy').onclick = () => copyText(inviteText(code));
-    });
-  } catch (e) { console.warn(e); toast('만들기 실패: ' + errWhy(e)); }
+    const d = await db.collection('codes').doc(c).get();
+    if (!d.exists) return toast('없는 친구코드입니다');
+    const f = d.data();
+    if (S.friends[f.uid]) return toast((f.name || '친구') + '님은 이미 친구입니다');
+    const b = db.batch();
+    b.set(db.collection('users').doc(S.uid).collection('friends').doc(f.uid), { name: f.name || '친구', addedAt: FV.serverTimestamp() });
+    b.set(db.collection('users').doc(f.uid).collection('friends').doc(S.uid), { name: myName(), addedAt: FV.serverTimestamp() });
+    await b.commit();
+    toast('👥 ' + (f.name || '친구') + '님과 친구가 되었습니다');
+    return true;
+  } catch (e) { console.warn(e); toast('친구 추가 실패: ' + errWhy(e)); }
 }
-function groupModal() {
-  const el = openModal('모임 들어가기 · 만들기',
-    '<div class="gSec"><h4>📩 초대코드로 들어가기</h4><input id="gJoin" class="inp" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="받은 숫자 4개"><button class="btn wide" id="gJoinOk">들어가기</button></div>' +
-    '<div class="gSec"><h4>✨ 새 모임 만들기</h4><input id="gName" class="inp" maxlength="20" placeholder="모임 이름 (예: 고등학교 동창)"><input id="gCode" class="inp" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="초대코드 숫자 4개 (예: 0715)"><div class="hint">친구들이 이 숫자 4개를 넣고 들어옵니다.<br>생일·전화번호 끝자리처럼 남이 쉽게 맞힐 숫자는 피하세요.<br>다른 모임이 이미 쓰는 번호면 다시 정해야 합니다.</div><button class="btn wide" id="gMakeOk">만들기</button></div>');
-  el.querySelector('#gJoinOk').onclick = () => joinGroup(el.querySelector('#gJoin').value);
-  el.querySelector('#gMakeOk').onclick = () => createGroup(el.querySelector('#gName').value, el.querySelector('#gCode').value);
+async function removeFriend(id) {
+  const n = nameOf(id);
+  if (!await askConfirm('친구 삭제', n + '님을 내 친구 목록에서 지울까요?\n(같이 있는 대화방은 그대로 남습니다)', '삭제', true)) return;
+  try { await db.collection('users').doc(S.uid).collection('friends').doc(id).delete(); toast('친구 목록에서 지웠습니다'); }
+  catch (e) { toast('삭제 실패'); }
 }
-async function leaveGroup(code) {
-  if (!await askConfirm('모임 나가기', '「' + groupName(code) + '」 모임에서 나갈까요?\n\n· 이 모임 사람 목록이 안 보이게 됩니다\n· 이미 들어가 있는 대화방은 그대로 남습니다', '나가기', true)) return;
-  try {
-    await db.collection('users').doc(S.uid).update({ groups: FV.arrayRemove(code) });
-    await db.collection('invites').doc(code).collection('members').doc(S.uid).delete();
-    if (S.group === code) S.group = '';
-    toast('모임에서 나왔습니다');
-  } catch (e) { toast('나가기 실패: ' + errWhy(e)); }
+function inviteText() {
+  return '끼톡 같이 해요 😊\n\n1. 크롬에서 아래 주소를 여세요.\n' + location.origin + location.pathname + '\n2. [Google로 시작하기]를 누르고 가입하세요.\n3. 👥 친구 → 친구 추가에 제 친구코드를 넣어 주세요.\n\n제 친구코드: ' + myCode();
 }
-function inviteText(code) {
-  return '끼톡 「' + groupName(code) + '」 모임에 초대합니다 😊\n\n1. 크롬에서 아래 주소를 여세요.\n' + location.origin + location.pathname + '\n2. [Google로 시작하기]를 누르세요.\n3. 닉네임과 초대코드를 넣고 가입하세요.\n   (이미 가입했다면 채팅 화면 [＋ 모임] → 초대코드로 들어가기)\n\n초대코드: ' + code;
+function welcomeModal() {
+  const el = openModal('가입을 환영합니다 🎉',
+    '<div class="gDone"><div class="gDoneLabel">내 친구코드</div><div class="gDoneCode">' + esc(myCode()) + '</div></div>' +
+    '<p class="gNote">· 친구에게 이 숫자를 알려 주면, 친구가 나를 추가할 수 있습니다.<br>· 친구의 코드를 받았다면 👥 친구 → 친구 추가에 넣으세요.<br>· 어느 한쪽만 추가해도 서로 친구가 됩니다.</p>' +
+    '<button class="btn wide" id="wcCopy">📋 초대 글 복사</button>');
+  el.querySelector('#wcCopy').onclick = () => copyText(inviteText());
 }
-function groupBarHTML() {
-  const gs = myGroups();
-  return '<div class="gBar"><button class="gChip' + (!S.group ? ' on' : '') + '" data-g="">전체</button>' +
-    gs.map(c => '<button class="gChip' + (S.group === c ? ' on' : '') + '" data-g="' + esc(c) + '">' + esc(groupName(c)) + '</button>').join('') +
-    '<button class="gChip add" id="gAdd">＋ 모임</button></div>';
+function friendsModal() {
+  const ids = Object.keys(S.friends || {}).sort((a, b) => (S.friends[a].name || '').localeCompare(S.friends[b].name || ''));
+  const el = openModal('👥 친구',
+    '<div class="fMe"><span>내 친구코드</span><b>' + esc(myCode() || '만드는 중…') + '</b><button class="btn small" id="fmCopy">📋 초대 글 복사</button></div>' +
+    '<div class="fAdd"><input id="fmCode" class="inp" maxlength="' + FCODE_LEN + '" inputmode="numeric" pattern="[0-9]*" placeholder="친구코드 숫자 ' + FCODE_LEN + '개"><button class="btn" id="fmAdd">추가</button></div>' +
+    '<div class="fTitle">내 친구 ' + ids.length + '명</div>' +
+    (ids.length ? ids.map(id => '<div class="fRow"><span>' + esc(S.friends[id].name || '친구') + '</span><button class="btn small gray" data-fdel="' + esc(id) + '">삭제</button></div>').join('')
+      : '<div class="empty">아직 친구가 없습니다.<br>친구코드를 주고받아 추가하세요.</div>'));
+  el.querySelector('#fmCopy').onclick = () => { if (!myCode()) return toast('친구코드를 만드는 중입니다'); copyText(inviteText()); };
+  el.querySelector('#fmAdd').onclick = async () => { if (await addFriendByCode(el.querySelector('#fmCode').value)) { closeModal(); later(friendsModal); } };
+  el.querySelectorAll('[data-fdel]').forEach(b => b.onclick = () => { closeModal(); later(() => removeFriend(b.dataset.fdel)); });
 }
-
-function friendSections(excludeIds) {
-  const seen = {}, out = [];
-  myGroups().forEach(c => {
-    const m = (S.gm && S.gm[c]) || {};
-    const list = Object.keys(m).filter(id => id !== S.uid && excludeIds.indexOf(id) < 0 && !seen[id])
-      .map(id => { seen[id] = c; return [id, m[id]]; })
-      .sort((x, y) => (x[1].name || '').localeCompare(y[1].name || ''));
-    if (list.length) out.push({ code: c, list });
-  });
-  return { sections: out, groupOf: seen };
+function friendList(excludeIds) {
+  return Object.keys(S.friends || {}).filter(id => id !== S.uid && excludeIds.indexOf(id) < 0)
+    .map(id => [id, S.friends[id]]).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
 }
-function pickListHTML(sections) {
-  return '<div class="pickList">' + sections.map(sec => '<div class="pickHead">👥 ' + esc(groupName(sec.code)) + '</div>' +
-    sec.list.map(f => '<label class="pick"><input type="checkbox" value="' + f[0] + '"><span>' + esc(f[1].name || '친구') + '</span></label>').join('')).join('') + '</div>';
+function pickListHTML(list) {
+  return '<div class="pickList">' + list.map(f => '<label class="pick"><input type="checkbox" value="' + f[0] + '"><span>' + esc(f[1].name || '친구') + '</span></label>').join('') + '</div>';
 }
-function nameOf(id) { return id === S.uid ? myName() : ((S.users[id] && S.users[id].name) || '친구'); }
 function newRoomModal() {
-  if (!myGroups().length) { toast('먼저 모임을 만들거나 들어가 주세요'); return groupModal(); }
-  const fs = friendSections([]);
-  if (!fs.sections.length) { toast('아직 내 모임에 다른 사람이 없습니다.\n설정 → 우리 모임에서 초대 글을 보내세요', 5000); return; }
-  const el = openModal('새 대화방', '<input class="inp" id="nrName" maxlength="20" placeholder="방 이름 (비우면 이름으로 자동)">' + pickListHTML(fs.sections) +
+  const friends = friendList([]);
+  if (!friends.length) { toast('먼저 👥 친구에서 친구를 추가해 주세요'); return friendsModal(); }
+  const el = openModal('새 대화방', '<input class="inp" id="nrName" maxlength="20" placeholder="방 이름 (비우면 이름으로 자동)">' + pickListHTML(friends) +
     '<div class="row end"><button class="btn" id="nrOk">만들기</button></div>');
   el.querySelector('#nrOk').onclick = async () => {
     const ids = Array.from(el.querySelectorAll('.pick input:checked')).map(i => i.value);
-    if (!ids.length) return toast('방에 넣을 사람을 체크하세요');
+    if (!ids.length) return toast('방에 넣을 친구를 체크하세요');
     const members = [S.uid].concat(ids);
     const names = {}, zero = {};
     members.forEach(id => { names[id] = nameOf(id); zero[id] = 0; });
     let name = el.querySelector('#nrName').value.trim();
     if (!name) name = members.map(id => names[id]).join(', ').slice(0, 20);
-    const code = S.group || fs.groupOf[ids[0]] || myGroups()[0];
     const ref = db.collection('rooms').doc();
     el.querySelector('#nrOk').disabled = true;
     try {
-      await ref.set({ name, groupId: code, members, memberNames: names, msgCount: 0, readSeq: zero, joinSeq: zero, notice: '', createdBy: S.uid, createdAt: FV.serverTimestamp(), lastAt: FV.serverTimestamp(), lastMessage: '' });
+      await ref.set({ name, members, memberNames: names, msgCount: 0, readSeq: zero, joinSeq: zero, notice: '', createdBy: S.uid, createdAt: FV.serverTimestamp(), lastAt: FV.serverTimestamp(), lastMessage: '' });
       closeModal();
       await sendTo(ref.id, { type: 'system', text: myName() + '님이 대화방을 만들었습니다' }, '대화방이 만들어졌습니다');
       openRoom(ref.id);
@@ -1580,12 +1540,12 @@ function memberList() {
   el.querySelector('#mlInvite').onclick = () => { closeModal(); later(inviteFriends); };
 }
 function inviteFriends() {
-  const fs = friendSections(S.room.members || []);
-  if (!fs.sections.length) return toast('초대할 사람이 없습니다');
-  const el = openModal('친구 초대', pickListHTML(fs.sections) + '<div class="row end"><button class="btn" id="ivOk">초대</button></div>');
+  const friends = friendList(S.room.members || []);
+  if (!friends.length) return toast('초대할 친구가 없습니다.\n👥 친구에서 먼저 친구를 추가하세요');
+  const el = openModal('친구 초대', pickListHTML(friends) + '<div class="row end"><button class="btn" id="ivOk">초대</button></div>');
   el.querySelector('#ivOk').onclick = async () => {
     const ids = Array.from(el.querySelectorAll('.pick input:checked')).map(i => i.value);
-    if (!ids.length) return toast('초대할 사람을 체크하세요');
+    if (!ids.length) return toast('초대할 친구를 체크하세요');
     closeModal();
     const names = ids.map(nameOf);
     try { await addMembers(ids.map((id, i) => ({ uid: id, name: names[i] })), myName() + '님이 ' + names.join(', ') + '님을 초대했습니다'); }
@@ -1700,12 +1660,14 @@ async function withdraw() {
     for (const d of left.docs) await db.collection('rooms').doc(d.id).collection('requests').doc(uid).delete().catch(() => {});
     const folders = await uref.collection('folders').get();
     const blocks = await uref.collection('blocks').get();
-    for (const part of chunk(saved.docs.concat(left.docs, folders.docs, blocks.docs), 400)) {
+    for (const part of chunk(saved.docs.concat(left.docs, folders.docs, blocks.docs, fr.docs), 400)) {
       const b = db.batch();
       part.forEach(d => b.delete(d.ref));
       await b.commit();
     }
-    for (const c of myGroups()) await db.collection('invites').doc(c).collection('members').doc(uid).delete().catch(() => {});
+    if (myCode()) await db.collection('codes').doc(myCode()).delete().catch(() => {});
+    const fr = await uref.collection('friends').get();
+    for (const d of fr.docs) await db.collection('users').doc(d.id).collection('friends').doc(uid).delete().catch(() => {});
     stopAll();
     await uref.delete();
   } catch (e) {
@@ -2067,10 +2029,7 @@ function renderSettings() {
   const box = $('settingsBox');
   box.innerHTML =
     '<div class="card"><h3>👤 내 정보</h3><p>닉네임: <b style="color:var(--txt)">' + esc(myName()) + '</b></p><p>' + esc((auth.currentUser && auth.currentUser.email) || '') + '</p><button class="btn small" id="stName" style="margin-top:10px">닉네임 변경</button></div>' +
-    '<div class="card"><h3>👨‍👩‍👧 우리 모임</h3>' + (myGroups().length
-      ? myGroups().map(c => '<div class="gRow"><div><b>' + esc(groupName(c)) + '</b><p>초대코드 <b style="color:var(--txt)">' + esc(c) + '</b> · ' + Object.keys((S.gm || {})[c] || {}).length + '명</p></div><div class="row" style="margin-top:6px"><button class="btn small" data-ginv="' + esc(c) + '">📋 초대 글 복사</button><button class="btn small gray" data-gout="' + esc(c) + '">나가기</button></div></div>').join('')
-      : '<p>아직 들어간 모임이 없습니다.</p>') +
-    '<p style="margin-top:8px">· 같은 모임 사람끼리만 서로 보이고 방을 만들 수 있습니다.<br>· 초대 글을 복사해 카톡으로 보내면 친구가 들어옵니다.</p><button class="btn small" id="stGroup" style="margin-top:10px">＋ 모임 들어가기 · 만들기</button></div>' +
+    '<div class="card"><h3>👥 친구</h3><p>내 친구코드: <b style="color:var(--txt);font-size:18px;letter-spacing:2px">' + esc(myCode() || '만드는 중…') + '</b> · 친구 ' + Object.keys(S.friends || {}).length + '명</p><p style="margin-top:6px">· 친구에게 내 코드를 알려 주거나, 친구 코드를 받아 추가하세요.<br>· 한쪽만 추가해도 서로 친구가 됩니다.</p><div class="row" style="margin-top:10px"><button class="btn small" id="stInvite">📋 초대 글 복사</button><button class="btn small gray" id="stFriends">친구 목록</button></div></div>' +
     '<div class="card"><h3>📦 사진 저장 공간 (모두 함께 사용)</h3><div class="bar"><div style="width:' + pct + '%"></div></div><p>' + (bytes / MB).toFixed(1) + 'MB / ' + (PURGE_BYTES / MB) + 'MB</p>' +
     '<p style="margin-top:8px">· 사진은 자동으로 작게 압축됩니다.<br>· ' + (PURGE_BYTES / MB) + 'MB를 넘으면 가장 오래된 사진부터 자동 삭제됩니다. (보물함에 저장한 사진 포함)<br>· 삭제될 차례가 가까운 사진에는 ⏳ 표시가 붙으니 폰에 저장하세요.<br>· 글과 링크는 삭제되지 않습니다.<br>· 영상은 유튜브 등 링크로 공유해 주세요.</p></div>' +
     '<div class="card"><h3>⭐ 보물함 백업</h3><p>폰을 바꾸거나 만일을 대비해 보물함을 파일로 보관하세요. 복원하면 지금 보물함에 더해집니다.</p><div class="row"><button class="btn small" id="stBackup">💾 백업</button><button class="btn small gray" id="stRestore">📁 복원</button></div></div>' +
@@ -2080,9 +2039,8 @@ function renderSettings() {
     '<div class="card"><h3>ℹ️ 끼톡</h3><p>앱월드 · 문의 fbi1588@hanmail.net</p><div class="legal"><a href="terms.html" target="_blank">이용약관</a><a href="privacy.html" target="_blank">개인정보처리방침</a></div><div class="row" style="margin-top:10px"><button class="btn small gray" id="stLogout">로그아웃</button><button class="btn small danger" id="stWithdraw">탈퇴</button></div></div>';
   box.querySelectorAll('[data-unblock]').forEach(b => b.onclick = () => { const u = b.dataset.unblock; unblockUser(u, (S.blocks[u] && S.blocks[u].name) || userName(u)); });
   $('stName').onclick = changeName;
-  box.querySelectorAll('[data-ginv]').forEach(b => b.onclick = () => copyText(inviteText(b.dataset.ginv)));
-  box.querySelectorAll('[data-gout]').forEach(b => b.onclick = () => leaveGroup(b.dataset.gout));
-  $('stGroup').onclick = groupModal;
+  $('stInvite').onclick = () => { if (!myCode()) return toast('친구코드를 만드는 중입니다'); copyText(inviteText()); };
+  $('stFriends').onclick = friendsModal;
   $('stBackup').onclick = backup;
   $('stRestore').onclick = () => $('restoreFile').click();
   $('stLogout').onclick = async () => { if (await askConfirm('로그아웃', '로그아웃할까요?', '로그아웃')) auth.signOut(); };
@@ -2093,7 +2051,8 @@ async function changeName() {
   if (!v || v === myName()) return;
   try {
     await db.collection('users').doc(S.uid).update({ name: v });
-    for (const c of myGroups()) await db.collection('invites').doc(c).collection('members').doc(S.uid).set({ name: v }, { merge: true }).catch(() => {});
+    if (myCode()) await db.collection('codes').doc(myCode()).update({ name: v }).catch(() => {});
+    for (const id of Object.keys(S.friends || {})) await db.collection('users').doc(id).collection('friends').doc(S.uid).set({ name: v }, { merge: true }).catch(() => {});
     for (const part of chunk(S.rooms, 400)) {
       const b = db.batch();
       part.forEach(r => { const u = {}; u['memberNames.' + S.uid] = v; b.update(db.collection('rooms').doc(r.id), u); });
